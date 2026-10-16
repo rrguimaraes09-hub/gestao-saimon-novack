@@ -561,7 +561,7 @@ function vUsuarios(){
       <td style="width:110px"><label class="ck"><input type="checkbox" data-f="ativo" ${p.ativo?"checked":""} ${eu?"disabled":""}> ativo</label></td>
       <td style="width:44px"><button class="btn ghost sm" data-rmp="${p.id}" ${eu?"disabled":""} aria-label="Remover">✕</button></td></tr>`}).join("");
   const conv=A.convites.map(c=>`<tr><td>${esc(c.email)}</td><td>${c.papel==="admin"?"Admin":"Equipe"}</td><td>${dataBR(c.criado_em)}</td><td style="width:44px"><button class="btn ghost sm" data-rmc="${c.id}" aria-label="Cancelar convite">✕</button></td></tr>`).join("");
-  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Usuários</span><h2>Quem acessa o sistema</h2><p>Convide pela caixa ao lado. A pessoa entra com o e-mail convidado e já encontra o acesso liberado. Quem entrar sem convite fica "inativo" até você marcar.</p></div></div>
+  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Usuários</span><h2>Quem acessa o sistema</h2><p>Convide pela caixa ao lado. A pessoa cria a conta (e-mail e senha) com o e-mail convidado e já encontra o acesso liberado. Quem criar conta sem convite fica "inativo" até você marcar.</p></div></div>
   <div class="split" style="grid-template-columns:minmax(0,1fr) 300px">
     <div style="display:flex;flex-direction:column;gap:18px">
       <div class="panel tbl"><h3 style="margin-bottom:10px">Perfis</h3><table><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Acesso</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -599,24 +599,115 @@ function confirmBox(msg,fn){
 }
 
 /* ---------- login e sessão ---------- */
-function telaLogin(msg){
-  ready=false;renderNav();
+// Link mágico (entrar por e-mail, sem senha) como alternativa discreta na tela de login.
+// Troque para false para deixar só e-mail e senha.
+const LINK_MAGICO=true;
+const MSGS_AUTH=[
+  [/at least \d+ characters|weak_password|password.*(short|weak)/i,"A senha precisa ter pelo menos 6 caracteres."],
+  [/already (been )?registered|already exists|user_already_exists|email_exists/i,"Este e-mail já tem conta. Use \"Entrar\" ou \"Esqueci minha senha\"."],
+  [/invalid login credentials|invalid_credentials/i,"E-mail ou senha incorretos."],
+  [/email not confirmed|email_not_confirmed/i,"Este e-mail ainda não foi confirmado. Procure a mensagem de confirmação na sua caixa de entrada."],
+  [/signups not allowed|signup_disabled|otp_disabled/i,"Não existe conta com este e-mail. Use \"Criar conta\"."],
+  [/rate limit|too many|over_email_send_rate_limit|over_request_rate_limit/i,"Muitas tentativas em pouco tempo. Aguarde um minuto e tente de novo."],
+  [/unable to validate email|invalid.*email|validation_failed/i,"E-mail inválido. Confira a digitação."],
+  [/same.*password|different from the old|same_password/i,"A nova senha precisa ser diferente da anterior."],
+  [/auth session missing|session_not_found|otp_expired|expired/i,"O link expirou ou já foi usado. Peça um novo."],
+];
+function msgAuth(error,padrao){
+  const txt=error?String(error.code||"")+" "+String(error.message||""):"";
+  for(const [re,m] of MSGS_AUTH)if(re.test(txt))return m;
+  return padrao+(error&&error.message?" ("+error.message+")":"");
+}
+const urlRetorno=()=>location.origin+location.pathname;
+let modoLogin="entrar";
+function telaLogin(msg,modo){
+  ready=false;renderNav();if(modo)modoLogin=modo;
+  const aba=(k,t)=>`<button type="button" role="tab" aria-selected="${modoLogin===k}" data-m="${k}">${t}</button>`;
+  const mail=`<label class="f">E-mail<input id="l_mail" type="email" required autocomplete="email" placeholder="voce@exemplo.com"></label>`;
+  const corpo={
+    entrar:`${mail}
+      <label class="f">Senha<input id="l_senha" type="password" required autocomplete="current-password" minlength="6"></label>
+      <button class="btn pri" id="l_btn">Entrar</button>
+      <p style="text-align:center"><button type="button" class="btn ghost sm" data-m="esqueci">Esqueci minha senha</button>${LINK_MAGICO?`<button type="button" class="btn ghost sm" data-m="magico">Entrar por link no e-mail</button>`:""}</p>`,
+    criar:`<label class="f">Seu nome<input id="l_nome" required autocomplete="name" placeholder="Como a equipe te chama"></label>
+      ${mail}
+      <label class="f">Senha<input id="l_senha" type="password" required autocomplete="new-password" minlength="6" placeholder="Pelo menos 6 caracteres"></label>
+      <button class="btn pri" id="l_btn">Criar conta</button>
+      <p>Se um administrador já convidou seu e-mail, você entra com o acesso liberado. Se não, a conta fica aguardando liberação na aba Usuários.</p>`,
+    esqueci:`${mail}
+      <button class="btn pri" id="l_btn">Enviar link de redefinição</button>
+      <p>Você recebe um e-mail com um link. Abra-o neste mesmo aparelho para escolher a nova senha.</p>
+      <p style="text-align:center"><button type="button" class="btn ghost sm" data-m="entrar">Voltar para Entrar</button></p>`,
+    magico:`${mail}
+      <button class="btn pri" id="l_btn">Receber link de acesso</button>
+      <p>Enviamos um link para o seu e-mail; clique nele para entrar sem digitar a senha. Só funciona para conta já criada.</p>
+      <p style="text-align:center"><button type="button" class="btn ghost sm" data-m="entrar">Voltar para Entrar</button></p>`,
+  };
   $("#app").innerHTML=`<div class="login">
-    <div><span class="eyebrow">Acesso</span><h2>Entrar no sistema</h2></div>
+    <div><span class="eyebrow">Acesso</span><h2>${modoLogin==="criar"?"Criar conta":modoLogin==="esqueci"?"Redefinir senha":"Entrar no sistema"}</h2></div>
     ${msg?`<div class="notice">${esc(msg)}</div>`:""}
     <form class="panel" id="flogin">
-      <label class="f">E-mail<input id="l_mail" type="email" required autocomplete="email" placeholder="voce@exemplo.com"></label>
-      <label class="f">Seu nome (só na primeira vez)<input id="l_nome" autocomplete="name" placeholder="Como a equipe te chama"></label>
-      <button class="btn pri" id="l_btn">Receber link de acesso</button>
-      <p>Enviamos um link para o seu e-mail. Clique nele para entrar; não há senha.</p>
+      <div class="tabs" role="tablist">${aba("entrar","Entrar")}${aba("criar","Criar conta")}</div>
+      ${corpo[modoLogin]||corpo.entrar}
     </form></div>`;
-  $("#flogin").onsubmit=async e=>{e.preventDefault();const email=$("#l_mail").value.trim().toLowerCase();const nome=$("#l_nome").value.trim();
-    $("#l_btn").disabled=true;
-    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:true,data:nome?{nome}:undefined}});
-    $("#l_btn").disabled=false;
-    if(error){toast(error.message.includes("rate")?"Muitos pedidos em pouco tempo. Aguarde um minuto.":"Não foi possível enviar: "+error.message);return}
-    $("#app").innerHTML=`<div class="login"><div><span class="eyebrow">Acesso</span><h2>Confira seu e-mail</h2></div><div class="panel"><p>Enviamos um link de acesso para <b>${esc(email)}</b>. Abra-o neste mesmo aparelho. Se não chegar em alguns minutos, veja a caixa de spam.</p></div><button class="btn ghost" id="l_volta">Usar outro e-mail</button></div>`;
-    $("#l_volta").onclick=()=>telaLogin();
+  $("#flogin").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>telaLogin(null,b.dataset.m));
+  $("#flogin").onsubmit=async e=>{
+    e.preventDefault();
+    const email=$("#l_mail").value.trim().toLowerCase();
+    const senha=$("#l_senha")?$("#l_senha").value:"";
+    const nome=$("#l_nome")?$("#l_nome").value.trim():"";
+    const btn=$("#l_btn");btn.disabled=true;
+    try{
+      if(modoLogin==="entrar"){
+        const {error}=await sb.auth.signInWithPassword({email,password:senha});
+        if(error){toast(msgAuth(error,"Não foi possível entrar"));return}
+        $("#app").innerHTML='<div class="empty">Entrando…</div>';   // onAuthStateChange(SIGNED_IN) chama aoEntrar
+      }else if(modoLogin==="criar"){
+        const {data,error}=await sb.auth.signUp({email,password:senha,options:{data:{nome},emailRedirectTo:urlRetorno()}});
+        if(error){toast(msgAuth(error,"Não foi possível criar a conta"));return}
+        if(data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0){toast(msgAuth({message:"already registered"}));return}
+        if(!data.session)telaConfiraEmail(email,"Enviamos um e-mail de confirmação para <b>"+esc(email)+"</b>. Abra o link para ativar a conta e depois entre com sua senha.");
+        // com sessão: onAuthStateChange(SIGNED_IN) chama aoEntrar
+      }else if(modoLogin==="esqueci"){
+        const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:urlRetorno()});
+        if(error){toast(msgAuth(error,"Não foi possível enviar"));return}
+        telaConfiraEmail(email,"Enviamos um link de redefinição de senha para <b>"+esc(email)+"</b>. Abra-o neste mesmo aparelho. Se não chegar em alguns minutos, veja a caixa de spam.");
+      }else{
+        const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:urlRetorno(),shouldCreateUser:false}});
+        if(error){toast(msgAuth(error,"Não foi possível enviar"));return}
+        telaConfiraEmail(email,"Enviamos um link de acesso para <b>"+esc(email)+"</b>. Abra-o neste mesmo aparelho. Se não chegar em alguns minutos, veja a caixa de spam.");
+      }
+    }finally{if(document.body.contains(btn))btn.disabled=false}
+  };
+}
+function telaConfiraEmail(email,html){
+  $("#app").innerHTML=`<div class="login"><div><span class="eyebrow">Acesso</span><h2>Confira seu e-mail</h2></div><div class="panel"><p>${html}</p></div><button class="btn ghost" id="l_volta">Voltar para Entrar</button></div>`;
+  $("#l_volta").onclick=()=>telaLogin(null,"entrar");
+}
+let recuperando=/type=recovery/.test(location.hash);
+// Erro trazido no hash pelo link de e-mail (expirado, já usado): mostrar uma vez na tela de login.
+const hashParams=new URLSearchParams(location.hash.replace(/^#/,""));
+let erroLink=hashParams.get("error")||hashParams.get("error_code")?msgAuth({code:hashParams.get("error_code"),message:hashParams.get("error_description")},"O link do e-mail não pôde ser usado"):null;
+if(erroLink)history.replaceState(null,"",urlRetorno());
+function telaNovaSenha(){
+  ready=false;renderNav();
+  $("#app").innerHTML=`<div class="login"><div><span class="eyebrow">Acesso</span><h2>Definir nova senha</h2></div>
+    <form class="panel" id="fsenha">
+      <p>Você entrou como <b>${esc(sessao.user.email)}</b>. Escolha a nova senha.</p>
+      <label class="f">Nova senha<input id="s_1" type="password" required autocomplete="new-password" minlength="6" placeholder="Pelo menos 6 caracteres"></label>
+      <label class="f">Repita a nova senha<input id="s_2" type="password" required autocomplete="new-password" minlength="6"></label>
+      <button class="btn pri" id="s_btn">Salvar senha</button>
+    </form></div>`;
+  $("#fsenha").onsubmit=async e=>{
+    e.preventDefault();
+    const a=$("#s_1").value,b=$("#s_2").value;
+    if(a!==b){toast("As duas senhas não são iguais.");return}
+    const btn=$("#s_btn");btn.disabled=true;
+    const {error}=await sb.auth.updateUser({password:a});
+    btn.disabled=false;
+    if(error){toast(msgAuth(error,"Não foi possível salvar a senha"));return}
+    recuperando=false;history.replaceState(null,"",urlRetorno());
+    toast("Senha salva.");aoEntrar(sessao,true);
   };
 }
 function telaAguardando(){
@@ -631,12 +722,13 @@ async function sair(){
   sessao=null;perfil=null;ready=false;draft=null;selOrc=null;view="funil";
   for(const k of Object.keys(S))S[k]=[];
   if(canal){sb.removeChannel(canal);canal=null}
-  telaLogin();
+  telaLogin(null,"entrar");
 }
 async function aoEntrar(s,forcar){
-  if(!s){sessao=null;perfil=null;telaLogin();return}
+  if(!s){sessao=null;perfil=null;telaLogin(erroLink,"entrar");erroLink=null;return}
   if(sessao&&sessao.user.id===s.user.id&&ready&&!forcar){sessao=s;return}   // só renovação de token
   sessao=s;
+  if(recuperando){telaNovaSenha();return}
   $("#app").innerHTML='<div class="empty">Carregando os dados do studio…</div>';
   const {data:p,error}=await sb.from("perfis").select("*").eq("id",s.user.id).maybeSingle();
   if(error){$("#app").innerHTML=`<div class="notice warn">Não foi possível ler seu perfil (${esc(error.message)}). Recarregue a página.</div>`;renderNav();return}
@@ -656,6 +748,7 @@ async function aoEntrar(s,forcar){
   // Não fazer chamadas ao Supabase dentro do callback: adiar para o próximo tick evita travamento do cliente.
   sb.auth.onAuthStateChange((ev,s)=>{setTimeout(()=>{
     if(ev==="SIGNED_OUT")return;       // sair() já cuida da tela
+    if(ev==="PASSWORD_RECOVERY"){recuperando=true;sessao=s;telaNovaSenha();return}
     aoEntrar(s,false);
   },0)});
 })();
