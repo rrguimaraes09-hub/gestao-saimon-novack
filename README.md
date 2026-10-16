@@ -13,7 +13,6 @@ Página estática (`index.html` + `config.js`) com dados no Supabase. Não há b
 | `supabase/migrations/*.sql` | Schema do banco, RLS, triggers e realtime |
 | `supabase/config.toml` | Configuração do Supabase CLI (gerada por `supabase init`) |
 | `prototipo-atual.html` | Protótipo original (base no claude.ai), mantido como referência |
-| `BRIEFING-CLAUDE-CODE.md` | Briefing do projeto |
 
 ## Primeira configuração (uma vez, pelo Rafael)
 
@@ -40,7 +39,7 @@ O Supabase CLI roda por `npx`, sem instalar nada. O login fica na sua conta pess
 3. Pegar a chave: Dashboard > Project Settings > API Keys. Copiar a chave **publishable** (`sb_publishable_...`) ou a **anon** legada e colar em `config.js`.
 
 4. Configurar o Auth (Dashboard > Authentication):
-   - **URL Configuration**: `Site URL` = endereço onde o app vai ficar (enquanto testa, `http://localhost:8080`). Em `Redirect URLs`, adicionar o mesmo endereço e o do domínio definitivo quando houver.
+   - **URL Configuration**: `Site URL` = `https://rrguimaraes09.github.io/gestao-saimon-novack/`. Em `Redirect URLs`, adicionar esse mesmo endereço, `http://localhost:8080` (para testar na máquina) e o do domínio definitivo quando houver.
    - **Sign In / Providers > Email**: manter ligado. O login é por **link mágico** (sem senha).
    - O e-mail padrão do Supabase tem limite baixo (poucos envios por hora). Para a equipe toda isso basta; se incomodar, configurar SMTP próprio em Authentication > Emails > SMTP Settings.
 
@@ -85,11 +84,22 @@ O campo "restrições e alergias" é dado de saúde (dado pessoal sensível, art
 
 ## Publicação
 
-Hospedagem estática (GitHub Pages ou similar). Depois, domínio do cliente. Ao mudar o endereço, atualizar `Site URL` e `Redirect URLs` no Auth.
+O app está publicado no GitHub Pages, servido direto da raiz da branch `main`:
+
+- Repositório: `https://github.com/rrguimaraes09/gestao-saimon-novack` (público; só há arquivos estáticos e a chave publishable, que é pública por natureza)
+- Endereço: **https://rrguimaraes09.github.io/gestao-saimon-novack/**
+
+Publicar uma alteração é só fazer commit e `git push` na `main`; o Pages republica em um ou dois minutos. Nunca commitar a senha do banco nem chave secreta (`service_role`).
+
+### Trocar para o domínio do cliente
+
+1. Criar na raiz do repositório o arquivo `CNAME` com o domínio (por exemplo `eventos.saimonnovack.com.br`), commitar e enviar. No GitHub, em Settings > Pages > Custom domain, o mesmo domínio aparece; marcar **Enforce HTTPS** quando o certificado for emitido.
+2. No DNS do cliente, criar um registro `CNAME` apontando esse subdomínio para `rrguimaraes09.github.io`.
+3. No Supabase (Authentication > URL Configuration), trocar `Site URL` para o novo endereço e acrescentá-lo em `Redirect URLs`. Manter o endereço antigo do GitHub Pages na lista enquanto alguém ainda usar o link antigo.
 
 ## Entrega ao cliente
 
-- Confirmar endereço da proposta ("Rua Eugênio De Bona Castelan, 539, Criciúma/SC") e logo.
+- Confirmar com o cliente o endereço que aparece no rodapé da proposta e a logo.
 - Convidar os administradores do Saimon pela aba Usuários.
 - Carga inicial de insumos e fichas, se o cliente mandar planilha.
 - Antes de entregar, apagar registros marcados `exemplo`:
