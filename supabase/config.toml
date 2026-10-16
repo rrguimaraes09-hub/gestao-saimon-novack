@@ -374,6 +374,10 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+# Função pública da página pedido.html: qualquer visitante pode chamar, a validação é dela.
+[functions.novo-pedido]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

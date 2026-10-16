@@ -4,4 +4,9 @@
 window.SN_CONFIG = {
   url: "https://oeutngbawbdnkqokgcoy.supabase.co",
   anonKey: "sb_publishable_-jkMekvjBQ662zJ6iN0Drg_cZ7rviiU",
+  // Porta de entrada pública (pedido.html): WhatsApp do studio que recebe os contatos, com DDI e DDD,
+  // só dígitos (ex.: "5548999999999"). Vazio = a página agradece sem abrir o WhatsApp.
+  whatsapp: "",
+  // Mensagem que chega pronta no WhatsApp. Marcadores: {nome} {tipo} {data} {convidados}.
+  mensagemWhatsApp: "Oi! Sou {nome} e quero um orçamento para {tipo} em {data}, para cerca de {convidados} pessoas.",
 };

@@ -9,7 +9,9 @@ Página estática (`index.html` + `config.js`) com dados no Supabase. Não há b
 | Arquivo | O que é |
 |---|---|
 | `index.html` | O app inteiro (tela do protótipo + camada de dados supabase-js + login por e-mail e senha + aba Usuários) |
-| `config.js` | URL do projeto e chave publishable/anon do Supabase |
+| `pedido.html` | Página pública (sem login) em que o cliente conta o básico do evento e segue para o WhatsApp; cria o cartão no funil |
+| `config.js` | URL do projeto, chave publishable/anon do Supabase, WhatsApp do studio e mensagem pronta |
+| `supabase/functions/novo-pedido/` | Edge Function que recebe o formulário público e grava cliente + orçamento com a chave de serviço |
 | `supabase/migrations/*.sql` | Schema do banco, RLS, triggers e realtime |
 | `supabase/config.toml` | Configuração do Supabase CLI (gerada por `supabase init`) |
 | `prototipo-atual.html` | Protótipo original (base no claude.ai), mantido como referência |
@@ -81,6 +83,27 @@ Regras no banco:
 - Anônimo não enxerga nada (sem política e sem privilégio nas tabelas).
 - Convite: o admin registra o e-mail na aba Usuários. Quando a pessoa cria a conta com esse e-mail, o perfil já nasce ativo com o papel do convite. Se a pessoa já tinha criado a conta antes (perfil inativo), o convite ativa na hora.
 - O admin não consegue se desativar nem mudar o próprio papel pela tela.
+
+## Pedido pelo Instagram e pelo site (porta de entrada)
+
+Em vez de o link do WhatsApp levar direto para a conversa, ele passa por `pedido.html`: o cliente preenche nome, WhatsApp, tipo de evento, data, convidados e uma mensagem opcional, e ao enviar duas coisas acontecem:
+
+1. A página chama a Edge Function `novo-pedido`, que cria o cliente (ou reaproveita pelo telefone) e abre um orçamento em **Pedido recebido**, com a origem do link. O cartão aparece no funil na hora, pelo realtime.
+2. A página abre o WhatsApp do studio (`wa.me`) com a mensagem já escrita (`mensagemWhatsApp` em `config.js`), e a pessoa só confirma o envio.
+
+Os links ficam na aba Usuários, em "Link de pedido", um por canal: `pedido.html?origem=instagram` e `pedido.html?origem=site`. Quem manda mensagem direto no WhatsApp, sem passar pela página, continua sendo cadastrado à mão em "Novo pedido".
+
+Proteções: o banco segue fechado para anônimo (a função grava com a chave de serviço, que só existe no servidor); campo-armadilha contra robôs; limite de 20 pedidos a cada 10 minutos; mesmo telefone com pedido aberto nas últimas 24 h não duplica o cartão (a nova mensagem vai para as notas do cliente).
+
+Para colocar no ar ou atualizar a função:
+
+```bash
+npx supabase functions deploy novo-pedido
+```
+
+A função não exige token (`verify_jwt = false` em `supabase/config.toml`), porque a página é pública. Preencher `whatsapp` em `config.js` com o número do studio (DDI + DDD + número, só dígitos); vazio, a página agradece sem abrir a conversa.
+
+Para testar na máquina: `npx supabase start`, depois `npx supabase functions serve novo-pedido` e apontar `url` do `config.js` temporariamente para `http://127.0.0.1:54321` (não commitar essa troca).
 
 ## Realtime e recarga
 

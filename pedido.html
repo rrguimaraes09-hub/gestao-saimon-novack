@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pedir orçamento · Saimon Novack</title>
+<meta name="description" content="Conte o básico do seu evento e siga para o WhatsApp com a conversa já aberta.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Mesma identidade do app: barra carvão, área creme, um único painel com o formulário */
+:root{
+  --bg:#EFEBE3; --surface:#FBF9F5; --ink:#1B1A1A; --muted:#6B675E; --line:#D8D1C3;
+  --gold:#76713F; --gold-soft:#A09C6B; --head:#1B1A1A; --head-ink:#EFEBE3; --warn:#9A6A1F; --ok:#4D6A39;
+  --display:"Lora",Georgia,"Times New Roman",serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141312; --surface:#1E1D1B; --ink:#EFEBE3; --muted:#A39E93; --line:#33312C;
+  --gold:#C3BD86; --gold-soft:#A09C6B; --head:#0C0B0B; --head-ink:#EFEBE3; --warn:#D7A75A; --ok:#8DB173; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141312; --surface:#1E1D1B; --ink:#EFEBE3; --muted:#A39E93; --line:#33312C;
+  --gold:#C3BD86; --gold-soft:#A09C6B; --head:#0C0B0B; --head-ink:#EFEBE3; --warn:#D7A75A; --ok:#8DB173; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font:15px/1.5 var(--body);margin:0;min-height:100dvh;display:flex;flex-direction:column}
+h1,h2{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:1.7rem} h2{font-size:1.3rem}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+header{background:var(--head);color:var(--head-ink)}
+.hwrap{max-width:640px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.mono{font-family:var(--display);font-size:1.6rem;line-height:1;color:var(--gold-soft);border-right:1px solid #ffffff33;padding-right:10px}
+.brand b{font-family:var(--display);font-weight:500;letter-spacing:.14em;font-size:.82rem;display:block}
+.brand small{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
+main{max-width:640px;width:100%;margin:0 auto;padding:28px 16px 56px;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.lead{margin:6px 0 0;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--muted);font-weight:500;min-width:0}
+label.f input,label.f select,label.f textarea{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:1rem;width:100%;min-width:0}
+label.f textarea{min-height:72px;resize:vertical}
+.full{grid-column:1/-1}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:1rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:none;border-color:var(--line);color:var(--ink);font-weight:500}
+.fine{font-size:.78rem;color:var(--muted);margin:0}
+.notice{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 14px;color:var(--muted)}
+.notice.warn{border-color:var(--warn);color:var(--ink)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+footer{margin-top:auto;text-align:center;font-size:.74rem;color:var(--muted);padding:16px}
+</style>
+</head>
+<body>
+<header><div class="hwrap"><span class="mono">SN</span><div class="brand"><b>SAIMON NOVACK</b><small>Gastronomia</small></div></div></header>
+<main id="app">
+  <div><span class="eyebrow">Orçamento</span><h1>Conte o básico do seu evento</h1><p class="lead">Leva meio minuto. Em seguida você segue para o WhatsApp com a conversa já aberta e a gente responde por lá.</p></div>
+  <form class="panel" id="f" novalidate>
+    <div class="grid">
+      <label class="f full">Seu nome<input id="nome" required autocomplete="name" maxlength="80" placeholder="Como podemos te chamar"></label>
+      <label class="f">WhatsApp<input id="tel" required inputmode="tel" autocomplete="tel" placeholder="(48) 9 0000-0000"></label>
+      <label class="f">Tipo de evento<select id="tipo" required>
+        <option value="">Escolha…</option>
+        <option>Casamento</option><option>Aniversário</option><option>Evento corporativo</option>
+        <option>Jantar ou almoço em casa</option><option>Confraternização</option><option>Outro</option>
+      </select></label>
+      <label class="f">Data prevista<input id="data" type="date"></label>
+      <label class="f">Convidados (aprox.)<input id="n" type="number" min="1" max="5000" inputmode="numeric" required placeholder="50"></label>
+      <label class="f full">Cidade<input id="cid" autocomplete="address-level2" maxlength="60" placeholder="Criciúma"></label>
+      <label class="f full">Quer adiantar algo? (opcional)<textarea id="msg" maxlength="500" placeholder="Estilo do evento, cardápio que tem em mente, horário…"></textarea></label>
+    </div>
+    <label class="hp" aria-hidden="true">Não preencha<input id="site" tabindex="-1" autocomplete="off"></label>
+    <button class="btn" id="btn">Enviar e falar no WhatsApp</button>
+    <p class="fine">Usamos esses dados só para preparar o seu orçamento e falar com você sobre o evento.</p>
+  </form>
+</main>
+<footer>Saimon Novack Gastronomia</footer>
+
+<script src="config.js"></script>
+<script>
+(()=>{
+  const cfg=window.SN_CONFIG||{};
+  const $=s=>document.querySelector(s);
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const q=new URLSearchParams(location.search);
+  const origemParam=(q.get("origem")||"site").toLowerCase();
+  const origem=origemParam==="instagram"?"Instagram":origemParam==="indicacao"?"Indicação":"Site";
+  const dataBR=s=>s?s.split("-").reverse().join("/"):"data a definir";
+
+  // Máscara leve do telefone, só para leitura; o servidor fica com os dígitos.
+  $("#tel").addEventListener("input",e=>{let d=e.target.value.replace(/\D/g,"").slice(0,11);
+    e.target.value=d.length>6?`(${d.slice(0,2)}) ${d.length===11?d[2]+" "+d.slice(3,7):d.slice(2,6)}-${d.length===11?d.slice(7):d.slice(6)}`:d.length>2?`(${d.slice(0,2)}) ${d.slice(2)}`:d});
+
+  function mensagemWhats(p){
+    const base=cfg.mensagemWhatsApp||"Oi! Sou {nome} e quero um orçamento para {tipo} em {data}, para cerca de {convidados} pessoas.";
+    const texto=base.replace("{nome}",p.nome).replace("{tipo}",p.tipoEvento.toLowerCase()).replace("{data}",dataBR(p.data)).replace("{convidados}",p.convidados);
+    return texto+(p.mensagem?` ${p.mensagem}`:"");
+  }
+  function linkWhats(p){
+    const num=String(cfg.whatsapp||"").replace(/\D/g,"");
+    return num?`https://wa.me/${num}?text=${encodeURIComponent(mensagemWhats(p))}`:"";
+  }
+  function pronto(p,repetido){
+    const wa=linkWhats(p);
+    $("#app").innerHTML=`<div><span class="eyebrow">Orçamento</span><h1>${repetido?"Já recebemos seu pedido":"Pedido recebido"}</h1>
+      <p class="lead">${repetido?"Seu contato já está com a equipe. ":"Obrigado, "+esc(p.nome.split(" ")[0])+"! "}${wa?"Falta só abrir a conversa no WhatsApp.":"Em breve a equipe fala com você pelo WhatsApp informado."}</p></div>
+      <div class="panel">${wa?`<a class="btn" style="text-align:center;text-decoration:none;display:block" href="${wa}">Abrir conversa no WhatsApp</a>
+        <p class="fine">A mensagem já vai escrita com o resumo do evento; é só enviar.</p>`:`<p class="fine" style="margin:0">Resumo: ${esc(p.tipoEvento)}, ${dataBR(p.data)}, ${p.convidados} pessoas.</p>`}</div>`;
+    if(wa)setTimeout(()=>{location.href=wa},900);
+  }
+  $("#f").onsubmit=async e=>{
+    e.preventDefault();
+    const f=$("#f");if(!f.reportValidity())return;
+    const p={nome:$("#nome").value.trim(),telefone:$("#tel").value,tipoEvento:$("#tipo").value,data:$("#data").value,
+      convidados:+$("#n").value||0,cidade:$("#cid").value.trim(),mensagem:$("#msg").value.trim(),origem,site:$("#site").value};
+    const btn=$("#btn");btn.disabled=true;btn.textContent="Enviando…";
+    try{
+      const r=await fetch(`${cfg.url}/functions/v1/novo-pedido`,{method:"POST",
+        headers:{"Content-Type":"application/json",apikey:cfg.anonKey,Authorization:"Bearer "+cfg.anonKey},body:JSON.stringify(p)});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok){aviso(j.erro||"Não foi possível enviar agora. Tente de novo em instantes.");return}
+      pronto(p,!!j.repetido);
+    }catch{aviso("Sem conexão. Confira a internet e tente de novo.")}
+    finally{btn.disabled=false;btn.textContent="Enviar e falar no WhatsApp"}
+  };
+  function aviso(m){let n=$("#aviso");if(!n){n=document.createElement("div");n.id="aviso";n.className="notice warn";$("#f").prepend(n)}n.textContent=m}
+})();
+</script>
+</body>
+</html>

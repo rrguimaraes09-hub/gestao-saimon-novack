@@ -573,9 +573,13 @@ function vUsuarios(){
         <label class="f">Papel<select id="cv_papel"><option value="equipe">Equipe (lê e grava os dados)</option><option value="admin">Admin (também gerencia usuários)</option></select></label>
         <button class="btn pri">Convidar</button>
         <p style="color:var(--muted);font-size:.8rem;margin:0">Avise a pessoa para entrar em ${esc(location.origin+location.pathname)} com esse e-mail.</p></form>
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px"><h3>Link de pedido</h3><p style="color:var(--muted);font-size:.85rem;margin:0">Página pública onde o cliente conta o básico do evento e segue para o WhatsApp. O cartão nasce em "Pedido recebido". Use um link por canal para saber de onde veio.</p>
+        ${[["instagram","Instagram"],["site","Site"]].map(([k,l])=>`<div style="display:flex;gap:6px;align-items:center"><input readonly value="${esc(location.origin+location.pathname.replace(/[^/]*$/,"")+"pedido.html?origem="+k)}" style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:.8rem"><button class="btn sm" data-copy="${k}" type="button">Copiar</button></div>`).join("")}
+        <p style="color:var(--muted);font-size:.8rem;margin:0">${window.SN_CONFIG&&window.SN_CONFIG.whatsapp?"WhatsApp configurado: "+esc(window.SN_CONFIG.whatsapp):'WhatsApp ainda não configurado em <code>config.js</code>: a página agradece, mas não abre a conversa.'}</p></div>
       <div class="panel" style="display:flex;flex-direction:column;gap:10px"><h3>Cópia de segurança</h3><p style="color:var(--muted);font-size:.85rem;margin:0">Baixa todos os dados (insumos, fichas, clientes e orçamentos) em um arquivo JSON. Faça isso periodicamente: o plano gratuito do Supabase não tem backup diário.</p><button class="btn" id="exportar">Exportar dados</button></div>
     </div>
   </div>`;
+  document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=async()=>{const inp=b.previousElementSibling;try{await navigator.clipboard.writeText(inp.value);toast("Link copiado.")}catch{inp.select();toast("Selecione e copie o link.")}});
   document.querySelectorAll("tr[data-p]").forEach(tr=>tr.addEventListener("change",async e=>{const f=e.target.dataset.f;if(!f)return;
     const v=e.target.type==="checkbox"?e.target.checked:e.target.value;
     const {error}=await sb.from("perfis").update({[f]:v}).eq("id",tr.dataset.p);
