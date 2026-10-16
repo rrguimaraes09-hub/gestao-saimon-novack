@@ -98,11 +98,12 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:.88rem}
 .sec:first-child{border-top:0;padding-top:0}
 .menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px}
 .menu .cat{grid-column:1/-1;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-top:6px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-.kpi{border-left:2px solid var(--gold-soft);padding:2px 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:12px}
+.kpi{border-left:2px solid var(--gold-soft);padding:2px 12px;min-width:0}
 .kpi span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.kpi b{display:block;font-family:var(--display);font-size:1.4rem;font-weight:600}
-.kpi.main b{font-size:1.8rem}
+/* Valores grandes (R$ 13.433,33) encolhem e podem quebrar antes de invadir o vizinho */
+.kpi b{display:block;font-family:var(--display);font-size:clamp(1.05rem,1.5vw,1.4rem);font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.kpi.main b{font-size:clamp(1.2rem,1.9vw,1.75rem)}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
 .tabs button{background:none;border:0;padding:8px 12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--gold)}
