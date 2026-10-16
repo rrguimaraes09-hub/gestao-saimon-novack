@@ -144,7 +144,7 @@ td input,td select{padding:6px 8px;border:1px solid var(--line);border-radius:6p
 
 @media (max-width:820px){.split{grid-template-columns:1fr}.list{position:static;flex-direction:row;overflow-x:auto}.list button{border-left:0;border-bottom:2px solid transparent;border-radius:8px 8px 0 0;min-width:170px}.list button[aria-current="true"]{border-bottom-color:var(--gold)}}
 @media (prefers-reduced-motion:no-preference){.card,.btn{transition:border-color .15s}}
-@media print{header,.list,.tabs,.kpis,#oform .sec:not(#oout),.bar{display:none!important}.panel{border:0;padding:0}.prop{margin:0;border-radius:0}}
+@media print{header,.list,.tabs,.kpis,#oform .sec:not(#oout),.bar,#oout>h3,#oout>p,.noprint,.toast{display:none!important}.panel{border:0;padding:0}.prop{margin:0;border-radius:0}}
 </style>
 </head>
 <body>
@@ -378,7 +378,7 @@ function vOrc(keep){
   $("#app").innerHTML=`<div class="split"><aside class="list" id="olist" aria-label="Orçamentos"></aside>
   <div class="panel" id="oform">
     <div class="sec"><div class="bar" style="margin:0"><div><span class="eyebrow">${esc(draft.servico||"")}</span><h2>${esc((byId("clientes",draft.cliente)||{}).nome||"Orçamento")}</h2></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="o_del" ${ro}>Excluir</button><button class="btn pri" id="o_save" ${ro}>Salvar alterações</button></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="o_del" ${ro}>Excluir</button><button class="btn" id="o_prop">Ver proposta</button><button class="btn pri" id="o_save" ${ro}>Salvar alterações</button></div></div>
       <div class="grid">
         <label class="f">Cliente<select data-f="cliente">${cliOpts}</select></label>
         <label class="f">Serviço<select data-f="servico">${SERVICOS.map(s=>`<option ${s===draft.servico?"selected":""}>${s}</option>`).join("")}</select></label>
@@ -389,9 +389,11 @@ function vOrc(keep){
         <label class="f">Etapa<select data-f="etapa">${STAGES.map(([k,l])=>`<option value="${k}" ${k===draft.etapa?"selected":""}>${l}</option>`).join("")}</select></label>
       </div></div>
     <div class="sec"><h3>Cardápio</h3><div class="menu">${menu||'<span style="color:var(--muted)">Cadastre fichas técnicas para montar o cardápio.</span>'}</div></div>
-    <div class="sec"><h3>Preço</h3><div class="grid">
-      <label class="f">CMV alvo (%)<input type="number" min="5" max="90" data-f="cmv" value="${+draft.cmv||30}"></label>
-      <label class="f">Equipe e logística (R$)<input type="number" min="0" step="10" data-f="equipe" value="${+draft.equipe||0}"></label>
+    <div class="sec"><h3>Preço</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, louças, deslocamento, impostos e a sua margem. Garçons, louças e transporte entram por enquanto em "Equipe e logística", como valor fechado.</p>
+    <div class="grid">
+      <label class="f">CMV alvo (% do preço que vai para insumos)<input type="number" min="5" max="90" data-f="cmv" value="${+draft.cmv||30}"></label>
+      <label class="f">Equipe e logística (R$: garçons, louças, transporte)<input type="number" min="0" step="10" data-f="equipe" value="${+draft.equipe||0}"></label>
       <label class="f">Preço final (R$, opcional)<input type="number" min="0" step="10" data-f="precoFinal" value="${+draft.precoFinal||""}" placeholder="usa o sugerido"></label>
       <label class="f">Valor já recebido (R$)<input type="number" min="0" step="10" data-f="pago" value="${+draft.pago||""}"></label>
     </div><label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>
@@ -400,6 +402,7 @@ function vOrc(keep){
   </div></div>`;
   $("#oform").addEventListener("input",onOrcInput);$("#oform").addEventListener("change",onOrcInput);
   $("#o_save").onclick=async()=>{if(await save("orcamentos/"+selOrc,draft))toast("Orçamento salvo.")};
+  $("#o_prop").onclick=()=>{subtab="proposta";renderOrcOut();const o=$("#oout");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})};
   $("#o_del").onclick=()=>confirmBox("Excluir este orçamento? Essa ação não pode ser desfeita.",async()=>{await del("orcamentos/"+selOrc);selOrc=null;draft=null;render()});
   renderOrcList();renderOrcOut();
 }
@@ -440,18 +443,34 @@ function renderOrcOut(){
       <div class="inv"><div><span>Investimento</span><b class="num">${brl(r.total)}</b></div><div><span>Por convidado</span><b class="num">${brl(r.porPessoa)}</b></div></div>
       ${draft.condicoes?`<div class="cond">${esc(draft.condicoes)}</div>`:""}
       <div class="rule"></div><div class="sub">Rua Eugênio De Bona Castelan, 539 · Criciúma/SC</div></div>
-      <p style="text-align:center;margin-top:12px"><button class="btn sm" id="o_print">Imprimir ou salvar em PDF</button></p>`}
+      <div class="noprint" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn pri" id="o_print">Salvar em PDF</button><button class="btn" id="o_whats" ${telWhats(c)?"":"disabled"}>Enviar pelo WhatsApp</button></div>
+      <p class="noprint" style="text-align:center;color:var(--muted);font-size:.8rem;margin:6px 0 0">O PDF sai pela tela de impressão do navegador: em "Destino", escolha "Salvar como PDF". ${telWhats(c)?"O WhatsApp abre a conversa com o cliente e o resumo já escrito; anexe o PDF em seguida.":"Para enviar pelo WhatsApp, cadastre o telefone do cliente."}</p>`}
   el.innerHTML=`<h3>Resultado</h3>
   <div class="kpis"><div class="kpi"><span>Custo de insumos</span><b class="num">${brl(r.insumos)}</b></div>
     <div class="kpi"><span>Preço sugerido</span><b class="num">${brl(r.sugerido)}</b></div>
     <div class="kpi main"><span>Preço da proposta</span><b class="num">${brl(r.total)}</b></div>
     <div class="kpi"><span>Por convidado</span><b class="num">${brl(r.porPessoa)}</b></div>
-    <div class="kpi"><span>CMV real</span><b class="num" style="color:${r.cmvReal>40?"var(--bad)":r.cmvReal>32?"var(--warn)":"var(--ok)"}">${num(r.cmvReal,1)}%</b></div>
+    <div class="kpi" title="Fatia do preço da proposta que os insumos ocupam"><span>CMV real</span><b class="num" style="color:${r.cmvReal>40?"var(--bad)":r.cmvReal>32?"var(--warn)":"var(--ok)"}">${num(r.cmvReal,1)}%</b></div>
     <div class="kpi"><span>Saldo a receber</span><b class="num">${brl(Math.max(0,saldo))}</b></div></div>
-  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)}).</p>
+  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)}). CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
   <div class="tabs" role="tablist">${T.map(([k,l])=>`<button role="tab" data-st="${k}" aria-selected="${subtab===k}">${l}</button>`).join("")}</div>${body}`;
   el.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(b){subtab=b.dataset.st;renderOrcOut()}};
   const pr=$("#o_print");if(pr)pr.onclick=()=>print();
+  const wa=$("#o_whats");if(wa)wa.onclick=()=>{const c=byId("clientes",draft.cliente);const url=linkWhatsProposta(c,draft,r);if(url)window.open(url,"_blank","noopener")};
+}
+// Telefone do cliente em formato wa.me (55 + DDD + número); vazio se não der para usar.
+function telWhats(c){if(!c)return"";let d=String(c.telefone||"").replace(/\D/g,"");if(d.length===10||d.length===11)d="55"+d;return (d.length===12||d.length===13)&&d.startsWith("55")?d:""}
+function linkWhatsProposta(c,o,r){
+  const tel=telWhats(c);if(!tel)return"";
+  const primeiro=(c.nome||"").trim().split(" ")[0]||"";
+  const pratos=r.linhas.map(l=>l.f.nome).join(", ");
+  const linhas=[`Olá${primeiro?", "+primeiro:""}! Segue o resumo da proposta da Saimon Novack Gastronomia:`,
+    `${o.tipoEvento||o.servico||"Evento"} em ${dataBR(o.data)}${o.cidade?", "+o.cidade:""}, ${num(r.n,0)} convidados.`,
+    pratos?`Cardápio: ${pratos}.`:"",
+    `Investimento: ${brl(r.total)} (${brl(r.porPessoa)} por convidado).`,
+    o.condicoes?o.condicoes:"",
+    "Envio a proposta completa em PDF na sequência."].filter(Boolean);
+  return `https://wa.me/${tel}?text=${encodeURIComponent(linhas.join("\n"))}`;
 }
 
 /* ---------- Fichas técnicas ---------- */
