@@ -39,7 +39,7 @@ O Supabase CLI roda por `npx`, sem instalar nada. O login fica na sua conta pess
 3. Pegar a chave: Dashboard > Project Settings > API Keys. Copiar a chave **publishable** (`sb_publishable_...`) ou a **anon** legada e colar em `config.js`.
 
 4. Configurar o Auth (Dashboard > Authentication):
-   - **URL Configuration**: `Site URL` = `https://rrguimaraes09.github.io/gestao-saimon-novack/`. Em `Redirect URLs`, adicionar esse mesmo endereço, `http://localhost:8080` (para testar na máquina) e o do domínio definitivo quando houver.
+   - **URL Configuration**: `Site URL` = `https://rrguimaraes09-hub.github.io/gestao-saimon-novack/`. Em `Redirect URLs`, adicionar esse mesmo endereço, `http://localhost:8080` (para testar na máquina) e o do domínio definitivo quando houver.
    - **Sign In / Providers > Email**: manter ligado. O login é por **link mágico** (sem senha).
    - O e-mail padrão do Supabase tem limite baixo (poucos envios por hora). Para a equipe toda isso basta; se incomodar, configurar SMTP próprio em Authentication > Emails > SMTP Settings.
 
@@ -86,15 +86,15 @@ O campo "restrições e alergias" é dado de saúde (dado pessoal sensível, art
 
 O app está publicado no GitHub Pages, servido direto da raiz da branch `main`:
 
-- Repositório: `https://github.com/rrguimaraes09/gestao-saimon-novack` (público; só há arquivos estáticos e a chave publishable, que é pública por natureza)
-- Endereço: **https://rrguimaraes09.github.io/gestao-saimon-novack/**
+- Repositório: `https://github.com/rrguimaraes09-hub/gestao-saimon-novack` (público; só há arquivos estáticos e a chave publishable, que é pública por natureza)
+- Endereço: **https://rrguimaraes09-hub.github.io/gestao-saimon-novack/**
 
 Publicar uma alteração é só fazer commit e `git push` na `main`; o Pages republica em um ou dois minutos. Nunca commitar a senha do banco nem chave secreta (`service_role`).
 
 ### Trocar para o domínio do cliente
 
 1. Criar na raiz do repositório o arquivo `CNAME` com o domínio (por exemplo `eventos.saimonnovack.com.br`), commitar e enviar. No GitHub, em Settings > Pages > Custom domain, o mesmo domínio aparece; marcar **Enforce HTTPS** quando o certificado for emitido.
-2. No DNS do cliente, criar um registro `CNAME` apontando esse subdomínio para `rrguimaraes09.github.io`.
+2. No DNS do cliente, criar um registro `CNAME` apontando esse subdomínio para `rrguimaraes09-hub.github.io`.
 3. No Supabase (Authentication > URL Configuration), trocar `Site URL` para o novo endereço e acrescentá-lo em `Redirect URLs`. Manter o endereço antigo do GitHub Pages na lista enquanto alguém ainda usar o link antigo.
 
 ## Entrega ao cliente
