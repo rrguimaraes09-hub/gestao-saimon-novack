@@ -3,5 +3,5 @@
 // Onde pegar: Dashboard > Project Settings > API Keys (chave "publishable" sb_publishable_... ou a "anon" legada).
 window.SN_CONFIG = {
   url: "https://oeutngbawbdnkqokgcoy.supabase.co",
-  anonKey: "COLE_AQUI_A_CHAVE_PUBLISHABLE_OU_ANON",
+  anonKey: "sb_publishable_-jkMekvjBQ662zJ6iN0Drg_cZ7rviiU",
 };
