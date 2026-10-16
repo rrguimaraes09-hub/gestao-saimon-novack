@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cartilha: links de pedido (Instagram e site)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap">
+<style>
+@page{size:A4;margin:18mm 16mm}
+:root{--bg:#FBF9F5;--ink:#1B1A1A;--muted:#6B675E;--line:#D8D1C3;--gold:#76713F;--gold-soft:#A09C6B;--sunk:#EFEBE3}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:11.5pt/1.55 "Inter",system-ui,sans-serif}
+.cab{background:var(--ink);color:#EFEBE3;padding:14mm 16mm 10mm;display:flex;align-items:center;gap:12px}
+.mono{font-family:"Lora",serif;font-size:2rem;color:var(--gold-soft);border-right:1px solid #ffffff33;padding-right:12px}
+.cab b{font-family:"Lora",serif;letter-spacing:.14em;font-size:.85rem;display:block;font-weight:500}
+.cab small{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
+main{padding:10mm 16mm 12mm;max-width:190mm}
+.eyebrow{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600}
+h1{font-family:"Lora",serif;font-weight:600;font-size:1.7rem;margin:2px 0 6px}
+h2{font-family:"Lora",serif;font-weight:600;font-size:1.15rem;margin:22px 0 6px;break-after:avoid}
+p{margin:0 0 8px}
+.lead{color:var(--muted)}
+.box{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0 10px;break-inside:avoid}
+.link{font-family:ui-monospace,Consolas,monospace;font-size:.86rem;word-break:break-all;background:var(--sunk);padding:8px 10px;border-radius:8px;display:block;margin:6px 0}
+.tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--gold-soft);color:var(--gold);border-radius:999px;padding:1px 8px;font-weight:600;margin-right:6px}
+ol,ul{margin:4px 0 8px;padding-left:20px}
+li{margin:3px 0}
+.msg{background:#1B1A1A;color:#EFEBE3;border-radius:10px;padding:12px 14px;font-size:.92rem;white-space:pre-wrap;break-inside:avoid}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rod{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:22px;padding-top:8px}
+</style>
+</head>
+<body>
+<div class="cab"><span class="mono">SN</span><div><b>SAIMON NOVACK</b><small>Gestão de eventos</small></div></div>
+<main>
+<span class="eyebrow">Cartilha</span>
+<h1>Links de pedido: Instagram e site</h1>
+<p class="lead">Como funciona a porta de entrada do funil, onde colocar cada link e o que esperar quando um cliente usar.</p>
+
+<h2>1. O que é</h2>
+<p>Em vez de o botão do WhatsApp levar o cliente direto para a conversa, ele passa antes por uma página curta do sistema. O cliente conta o básico do evento em meio minuto (nome, WhatsApp, tipo de evento, data, convidados e uma mensagem opcional) e aperta <b>Enviar e falar no WhatsApp</b>. Nesse momento duas coisas acontecem ao mesmo tempo: um cartão nasce no <b>Funil</b>, na coluna <b>Pedido recebido</b>, e o WhatsApp do studio abre no celular do cliente com a mensagem já escrita. A conversa segue normal; a diferença é que o pedido já está no sistema antes de você responder.</p>
+
+<h2>2. Os dois links</h2>
+<p>São a mesma página, com uma marcação diferente no final. Isso diz ao sistema de onde o cliente veio, e essa informação fica gravada no pedido (campo "Como conheceu").</p>
+<div class="box"><span class="tag">Instagram</span> para a bio, o botão de ação do perfil e os stories
+<span class="link">https://rrguimaraes09-hub.github.io/gestao-saimon-novack/pedido.html?origem=instagram</span></div>
+<div class="box"><span class="tag">Site</span> para o botão "Peça um orçamento" e no lugar do botão de WhatsApp do site
+<span class="link">https://rrguimaraes09-hub.github.io/gestao-saimon-novack/pedido.html?origem=site</span></div>
+<p>Os dois links também ficam dentro do sistema, na aba <b>Usuários</b>, painel <b>Link de pedido</b>, com botão <b>Copiar</b>. Quando o sistema ganhar o domínio próprio, os links mudam e eu aviso para trocar nos dois lugares.</p>
+
+<h2>3. O que o cliente vê</h2>
+<ol>
+<li>Abre o link e vê a página com a marca Saimon Novack e o formulário.</li>
+<li>Preenche nome, WhatsApp, tipo de evento, data prevista, número de convidados, cidade e, se quiser, uma mensagem.</li>
+<li>Aperta <b>Enviar e falar no WhatsApp</b>. Em um segundo o WhatsApp abre com o número do studio e a mensagem pronta, por exemplo:</li>
+</ol>
+<div class="msg">Oi! Sou Maria e quero um orçamento para casamento em 14/03/2027, para cerca de 80 pessoas. Jantar ao ar livre.</div>
+<p style="margin-top:8px">O cliente só confirma o envio. Se ele desistir de enviar, o cartão já existe no funil mesmo assim, com o telefone dele.</p>
+
+<h2>4. O que aparece para você</h2>
+<ul>
+<li>Um cartão novo em <b>Pedido recebido</b>, com nome, tipo de evento, data e convidados. Ele aparece sozinho, sem precisar recarregar a tela.</li>
+<li>O cliente fica cadastrado na aba <b>Clientes</b>, com o WhatsApp e a origem. A mensagem que ele escreveu vai para as <b>Observações</b> do cliente, com a data.</li>
+<li>Se a mesma pessoa preencher de novo no mesmo dia, o sistema não cria um segundo cartão: só acrescenta a nova mensagem nas observações.</li>
+<li>Para trabalhar o pedido: clique no cartão, monte o cardápio, ajuste o preço e use <b>Ver proposta</b> para enviar por WhatsApp ou salvar em PDF.</li>
+</ul>
+
+<h2>5. O que não entra sozinho</h2>
+<p>Quem já tem o número do studio salvo e manda mensagem direto, ou quem usa o botão "Enviar mensagem" dentro do perfil do Instagram, não passa pela página e não gera cartão. Para esses, o caminho continua sendo o botão <b>Novo pedido</b> no Funil, como hoje. Quanto mais o link da página substituir o link direto do WhatsApp (bio, stories, site, cartão de visita), menos pedidos ficam de fora.</p>
+
+<h2>6. Como testar antes de divulgar</h2>
+<ol>
+<li>Abra o link do Instagram no seu celular e preencha com os seus próprios dados.</li>
+<li>Veja o WhatsApp abrir com a mensagem pronta. Pode enviar ou não.</li>
+<li>No computador, abra o Funil e confira o cartão em Pedido recebido.</li>
+<li>Para apagar o teste: abra o cartão, clique em <b>Excluir</b>; depois, em Clientes, exclua o seu cadastro de teste.</li>
+</ol>
+
+<div class="duas">
+<div class="box"><b>Pode</b><ul><li>Colocar o link em quantos lugares quiser.</li><li>Mandar o link por WhatsApp para um cliente que pediu orçamento por telefone.</li></ul></div>
+<div class="box"><b>Evite</b><ul><li>Encurtadores que escondem o endereço: alguns celulares bloqueiam.</li><li>Editar o final do link (<i>?origem=...</i>): sem ele, a origem fica como "Site".</li></ul></div>
+</div>
+
+<p class="rod">Dúvidas ou ajustes no texto da mensagem automática: falar com o Rafael. Documento gerado em 16/10/2026.</p>
+</main>
+</body>
+</html>
