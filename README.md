@@ -8,7 +8,7 @@ Página estática (`index.html` + `config.js`) com dados no Supabase. Não há b
 
 | Arquivo | O que é |
 |---|---|
-| `index.html` | O app inteiro (tela do protótipo + camada de dados supabase-js + login + aba Usuários) |
+| `index.html` | O app inteiro (tela do protótipo + camada de dados supabase-js + login por e-mail e senha + aba Usuários) |
 | `config.js` | URL do projeto e chave publishable/anon do Supabase |
 | `supabase/migrations/*.sql` | Schema do banco, RLS, triggers e realtime |
 | `supabase/config.toml` | Configuração do Supabase CLI (gerada por `supabase init`) |
@@ -38,30 +38,48 @@ O Supabase CLI roda por `npx`, sem instalar nada. O login fica na sua conta pess
 
 3. Pegar a chave: Dashboard > Project Settings > API Keys. Copiar a chave **publishable** (`sb_publishable_...`) ou a **anon** legada e colar em `config.js`.
 
-4. Configurar o Auth (Dashboard > Authentication):
-   - **URL Configuration**: `Site URL` = `https://rrguimaraes09-hub.github.io/gestao-saimon-novack/`. Em `Redirect URLs`, adicionar esse mesmo endereço, `http://localhost:8080` (para testar na máquina) e o do domínio definitivo quando houver.
-   - **Sign In / Providers > Email**: manter ligado. O login é por **link mágico** (sem senha).
-   - O e-mail padrão do Supabase tem limite baixo (poucos envios por hora). Para a equipe toda isso basta; se incomodar, configurar SMTP próprio em Authentication > Emails > SMTP Settings.
+4. Configurar o Auth. A configuração fica versionada em `supabase/config.toml` (seção `[auth]`) e é aplicada com:
 
-5. Primeiro acesso: abrir o app, pedir o link com o seu e-mail. **O primeiro usuário que entrar vira admin automaticamente.** Os próximos entram como inativos até serem convidados ou liberados na aba Usuários.
+   ```bash
+   npx supabase config push
+   ```
+
+   O CLI mostra o que vai mudar e pede confirmação. O que está lá:
+   - `site_url` = `https://rrguimaraes09-hub.github.io/gestao-saimon-novack/` e `additional_redirect_urls` com esse endereço e `http://localhost:8765/` (teste na máquina). A comparação do Supabase é exata e o app manda o endereço com barra final, então cada endereço local entra com e sem barra. Se um link de e-mail voltar para o endereço publicado em vez do local, é porque a forma com barra ainda não foi aplicada. Acrescentar o domínio definitivo quando houver.
+   - `[auth.email]`: `enable_signup = true` (qualquer pessoa cria conta) e `enable_confirmations = false` (sem e-mail de confirmação; quem entra é controlado pelo convite e pela liberação do admin, não pela confirmação do e-mail).
+   - Senha mínima de 6 caracteres (`minimum_password_length`).
+   - O e-mail padrão do Supabase tem limite baixo (poucos envios por hora). Ele só é usado para "Esqueci minha senha" e para o link de acesso alternativo; se incomodar, configurar SMTP próprio em `[auth.email.smtp]` ou em Authentication > Emails > SMTP Settings.
+
+5. Primeiro acesso: abrir o app, clicar em **Criar conta** e informar nome, e-mail e senha. **O primeiro usuário que criar conta vira admin automaticamente.** Os próximos entram como inativos até serem convidados ou liberados na aba Usuários.
 
 ## Rodar localmente
 
 Qualquer servidor estático serve. Exemplo:
 
 ```bash
-npx -y serve -l 8080 .
+npx -y serve -l 8765 .
 ```
 
-Abrir `http://localhost:8080`.
+Abrir `http://localhost:8765` (esse endereço está nas Redirect URLs do Auth, então os links de e-mail voltam para ele quando o pedido partiu da máquina local).
 
 ## Controle de acesso
+
+Login por **e-mail e senha** (Supabase Auth). A tela de acesso tem:
+
+- **Entrar**: e-mail e senha de uma conta já criada.
+- **Criar conta**: nome, e-mail e senha. O nome vai em `options.data.nome` e o trigger `ao_criar_usuario` grava o perfil com ele. A conta nasce **ativa** se o e-mail tinha convite pendente (ou se é o primeiro usuário, que vira admin); senão nasce **inativa** e a pessoa vê a tela "Aguardando liberação" até um admin marcar `ativo` na aba Usuários.
+- **Esqueci minha senha**: envia um link de redefinição (`resetPasswordForEmail`) que volta para o endereço do app; ao abrir, aparece a tela "Definir nova senha" (`updateUser`).
+- **Entrar por link no e-mail**: alternativa discreta ao login com senha, só para conta já criada (não cria usuário). Para tirar da tela, trocar `LINK_MAGICO` para `false` no `index.html`.
+
+Erros do Auth aparecem em português (senha curta, e-mail já cadastrado, e-mail ou senha incorretos, limite de envios de e-mail).
+
+Regras no banco:
 
 - `perfis`: um por usuário do Auth, com `papel` (`admin` ou `equipe`) e `ativo`.
 - Só perfil **ativo** lê e grava insumos, fichas, clientes e orçamentos.
 - Só **admin** vê e mexe em perfis e convites.
 - Anônimo não enxerga nada (sem política e sem privilégio nas tabelas).
-- Convite: o admin registra o e-mail na aba Usuários. Quando a pessoa entra com esse e-mail, o perfil já nasce ativo com o papel do convite. Se a pessoa já tinha entrado antes (perfil inativo), o convite ativa na hora.
+- Convite: o admin registra o e-mail na aba Usuários. Quando a pessoa cria a conta com esse e-mail, o perfil já nasce ativo com o papel do convite. Se a pessoa já tinha criado a conta antes (perfil inativo), o convite ativa na hora.
 - O admin não consegue se desativar nem mudar o próprio papel pela tela.
 
 ## Realtime e recarga
