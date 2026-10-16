@@ -195,11 +195,14 @@ function calc(o){
   const insumos=linhas.reduce((a,l)=>a+l.custo,0);
   const cmv=Math.max(1,+o.cmv||30)/100;
   const equipe=+o.equipe||0;
-  const sugerido=insumos/cmv+equipe;
+  const garcons=(+o.garconsQtd||0)*(+o.garconsValor||0);
+  const loucas=+o.loucas||0;
+  const terceiros=garcons+loucas;
+  const sugerido=insumos/cmv+equipe+terceiros;
   const total=+o.precoFinal>0?+o.precoFinal:sugerido;
   const compras={};
   linhas.forEach(l=>(l.f.itens||[]).forEach(it=>{compras[it.insumo]=(compras[it.insumo]||0)+(+it.qtd||0)*l.fator}));
-  return {n,linhas,insumos,equipe,sugerido,total,porPessoa:n?total/n:0,cmvReal:total?insumos/total*100:0,compras};
+  return {n,linhas,insumos,equipe,garcons,loucas,terceiros,sugerido,total,porPessoa:n?total/n:0,cmvReal:total?insumos/total*100:0,compras};
 }
 
 /* ---------- camada de dados (Supabase) ----------
@@ -209,7 +212,7 @@ const MAP={
   insumos:{nome:"nome",unidade:"unidade",custo:"custo",exemplo:"exemplo"},
   fichas:{nome:"nome",categoria:"categoria",rendimento:"rendimento",porcoesPorPessoa:"porcoes_por_pessoa",itens:"itens",preparo:"preparo",exemplo:"exemplo"},
   clientes:{nome:"nome",telefone:"telefone",email:"email",aniversario:"aniversario",origem:"origem",pratoMarcante:"prato_marcante",restricoes:"restricoes",notas:"notas",consentimento:"consentimento",exemplo:"exemplo"},
-  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
+  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
 };
 const NULAVEIS=new Set(["aniversario","data","cliente","nota"]);   // texto vazio vira null no banco
 const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota"]);
@@ -390,10 +393,13 @@ function vOrc(keep){
       </div></div>
     <div class="sec"><h3>Cardápio</h3><div class="menu">${menu||'<span style="color:var(--muted)">Cadastre fichas técnicas para montar o cardápio.</span>'}</div></div>
     <div class="sec"><h3>Preço</h3>
-    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, louças, deslocamento, impostos e a sua margem. Garçons, louças e transporte entram por enquanto em "Equipe e logística", como valor fechado.</p>
+    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, impostos e a sua margem. Garçons e louças são terceirizados e têm campos próprios, somados por fora ao preço; "Equipe e logística" é o custo interno (sua equipe, transporte).</p>
     <div class="grid">
       <label class="f">CMV alvo (% do preço que vai para insumos)<input type="number" min="5" max="90" data-f="cmv" value="${+draft.cmv||30}"></label>
-      <label class="f">Equipe e logística (R$: garçons, louças, transporte)<input type="number" min="0" step="10" data-f="equipe" value="${+draft.equipe||0}"></label>
+      <label class="f">Equipe e logística, interno (R$)<input type="number" min="0" step="10" data-f="equipe" value="${+draft.equipe||0}"></label>
+      <label class="f">Garçons terceirizados (quantidade)<input type="number" min="0" step="1" data-f="garconsQtd" value="${+draft.garconsQtd||0}"></label>
+      <label class="f">Diária por garçom (R$)<input type="number" min="0" step="10" data-f="garconsValor" value="${+draft.garconsValor||0}"></label>
+      <label class="f">Louças e utensílios terceirizados (R$)<input type="number" min="0" step="10" data-f="loucas" value="${+draft.loucas||0}"></label>
       <label class="f">Preço final (R$, opcional)<input type="number" min="0" step="10" data-f="precoFinal" value="${+draft.precoFinal||""}" placeholder="usa o sugerido"></label>
       <label class="f">Valor já recebido (R$)<input type="number" min="0" step="10" data-f="pago" value="${+draft.pago||""}"></label>
     </div><label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>
@@ -441,18 +447,20 @@ function renderOrcOut(){
       <h2>Proposta gastronômica</h2><div class="sub">${esc(c?c.nome:"")} · ${esc(draft.tipoEvento||draft.servico||"")}<br>${dataBR(draft.data)} · ${esc(draft.cidade||"")} · ${num(r.n,0)} convidados</div>
       <div class="rule"></div>${pratos}<div class="rule"></div>
       <div class="inv"><div><span>Investimento</span><b class="num">${brl(r.total)}</b></div><div><span>Por convidado</span><b class="num">${brl(r.porPessoa)}</b></div></div>
+      ${(+draft.garconsQtd||0)>0||r.loucas>0?`<div class="sub" style="margin-top:10px">Inclui ${[(+draft.garconsQtd||0)>0?`equipe de ${num(+draft.garconsQtd,0)} ${+draft.garconsQtd===1?"garçom":"garçons"}`:"",r.loucas>0?"louças e utensílios":""].filter(Boolean).join(" e ")}.</div>`:""}
       ${draft.condicoes?`<div class="cond">${esc(draft.condicoes)}</div>`:""}
       <div class="rule"></div><div class="sub">Rua Eugênio De Bona Castelan, 539 · Criciúma/SC</div></div>
       <div class="noprint" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn pri" id="o_print">Salvar em PDF</button><button class="btn" id="o_whats" ${telWhats(c)?"":"disabled"}>Enviar pelo WhatsApp</button></div>
       <p class="noprint" style="text-align:center;color:var(--muted);font-size:.8rem;margin:6px 0 0">O PDF sai pela tela de impressão do navegador: em "Destino", escolha "Salvar como PDF". ${telWhats(c)?"O WhatsApp abre a conversa com o cliente e o resumo já escrito; anexe o PDF em seguida.":"Para enviar pelo WhatsApp, cadastre o telefone do cliente."}</p>`}
   el.innerHTML=`<h3>Resultado</h3>
   <div class="kpis"><div class="kpi"><span>Custo de insumos</span><b class="num">${brl(r.insumos)}</b></div>
+    <div class="kpi"><span>Garçons e louças</span><b class="num">${brl(r.terceiros)}</b></div>
     <div class="kpi"><span>Preço sugerido</span><b class="num">${brl(r.sugerido)}</b></div>
     <div class="kpi main"><span>Preço da proposta</span><b class="num">${brl(r.total)}</b></div>
     <div class="kpi"><span>Por convidado</span><b class="num">${brl(r.porPessoa)}</b></div>
     <div class="kpi" title="Fatia do preço da proposta que os insumos ocupam"><span>CMV real</span><b class="num" style="color:${r.cmvReal>40?"var(--bad)":r.cmvReal>32?"var(--warn)":"var(--ok)"}">${num(r.cmvReal,1)}%</b></div>
     <div class="kpi"><span>Saldo a receber</span><b class="num">${brl(Math.max(0,saldo))}</b></div></div>
-  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)}). CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
+  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística + garçons + louças (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)} + ${brl(r.garcons)} + ${brl(r.loucas)}). CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
   <div class="tabs" role="tablist">${T.map(([k,l])=>`<button role="tab" data-st="${k}" aria-selected="${subtab===k}">${l}</button>`).join("")}</div>${body}`;
   el.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(b){subtab=b.dataset.st;renderOrcOut()}};
   const pr=$("#o_print");if(pr)pr.onclick=()=>print();
@@ -468,6 +476,7 @@ function linkWhatsProposta(c,o,r){
     `${o.tipoEvento||o.servico||"Evento"} em ${dataBR(o.data)}${o.cidade?", "+o.cidade:""}, ${num(r.n,0)} convidados.`,
     pratos?`Cardápio: ${pratos}.`:"",
     `Investimento: ${brl(r.total)} (${brl(r.porPessoa)} por convidado).`,
+    (+o.garconsQtd||0)>0||r.loucas>0?`Inclui ${[(+o.garconsQtd||0)>0?`equipe de ${num(+o.garconsQtd,0)} ${+o.garconsQtd===1?"garçom":"garçons"}`:"",r.loucas>0?"louças e utensílios":""].filter(Boolean).join(" e ")}.`:"",
     o.condicoes?o.condicoes:"",
     "Envio a proposta completa em PDF na sequência."].filter(Boolean);
   return `https://wa.me/${tel}?text=${encodeURIComponent(linhas.join("\n"))}`;

@@ -105,6 +105,10 @@ A função não exige token (`verify_jwt = false` em `supabase/config.toml`), po
 
 Para testar na máquina: `npx supabase start`, depois `npx supabase functions serve novo-pedido` e apontar `url` do `config.js` temporariamente para `http://127.0.0.1:54321` (não commitar essa troca).
 
+## Preço do orçamento
+
+Preço sugerido = insumos ÷ CMV alvo + equipe e logística (custo interno) + garçons terceirizados (quantidade × diária) + louças e utensílios terceirizados (valor fechado). O preço final, se preenchido, substitui o sugerido. "CMV real" é insumos ÷ preço da proposta (verde até 32%, amarelo até 40%, vermelho acima). A proposta ao cliente mostra "Inclui equipe de N garçons e louças e utensílios" quando houver, sem valores. Colunas `garcons_qtd`, `garcons_valor` e `loucas` em `orcamentos` (migração `20261016200000_terceirizados.sql`).
+
 ## Realtime e recarga
 
 A tela assina `postgres_changes` das tabelas operacionais, então o que um usuário grava aparece para os outros. Ao voltar para a aba do navegador, o app recarrega tudo, para cobrir eventos perdidos em segundo plano.
