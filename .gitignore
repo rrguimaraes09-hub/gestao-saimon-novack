@@ -7,3 +7,4 @@ supabase/.branches/
 Thumbs.db
 .DS_Store
 BRIEFING-CLAUDE-CODE.md
+supabase/seed.sql

@@ -120,6 +120,18 @@ O plano Free do Supabase **não oferece backup para download** e **pausa o proje
 - A aba Usuários tem o botão **Exportar dados**, que baixa tudo em JSON. Combinar com o cliente uma rotina (por exemplo, toda segunda-feira).
 - Uso diário normal da equipe já evita a pausa. Em período parado, abrir o app ou o dashboard uma vez por semana.
 
+## Textos fixos da proposta
+
+Os textos que se repetem em toda proposta (endereço do studio, observação das louças, observação dos garçons, dados de pagamento, observações importantes e validade) ficam no banco, na tabela `configuracoes` (chave `proposta`), que só usuário logado lê e só admin grava. O admin edita tudo na aba **Usuários > Dados da proposta**, sem mexer em código. O repositório não guarda nenhum desses dados.
+
+Para carregar os textos pela primeira vez sem passar pelo repositório, existe o arquivo `supabase/seed.sql` (ignorado pelo git) com um `insert ... on conflict do update`; ele roda no `supabase db reset` local e, no projeto real, com:
+
+```bash
+npx supabase db push --include-seed
+```
+
+Dados que mudam a cada evento (horário, local, sinal e data limite, serviço extra como copeira) ficam no próprio orçamento. Na prévia de orçamento da proposta, a gastronomia sai separada de louças, garçons e serviço extra. Quando o cardápio tem pratos em alguma "Estação" (boas-vindas, quentes, sobremesas), a estação aparece em linha própria, com a fatia da gastronomia proporcional ao custo de insumos dela; o restante do menu fica na linha "Gastronomia".
+
 ## LGPD
 
 O campo "restrições e alergias" é dado de saúde (dado pessoal sensível, art. 11 da LGPD). A empresa do Saimon é a controladora; o Rafael, como quem opera a infraestrutura, é operador. Pendências:
