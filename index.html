@@ -193,6 +193,13 @@ const CATS=["Estação de boas-vindas","Entrada","Volante","Principal","Acompanh
 const CFG_PADRAO={endereco:"",loucasObs:"",garconsObs:"",pagamento:{empresa:"",cnpj:"",banco:"",agencia:"",conta:"",pix:""},observacoes:[],validadeDias:0};
 let CFG_PROP={...CFG_PADRAO};
 // Textos da proposta: tabela configuracoes (chave "proposta"), lida após o login; admin edita na aba Usuários.
+// Texto padrão de cada bloco da proposta; o orçamento pode substituir em draft.textos
+function textoPadrao(chave,o){const qg=+(o&&o.garconsQtd)||0;
+  if(chave==="garcons")return [qg>0?`${num(qg,0)} ${qg===1?"profissional":"profissionais"} para servir alimentação e bebida, deslocamento incluso.`:"",CFG_PROP.garconsObs].filter(Boolean).join(" ");
+  if(chave==="loucas")return CFG_PROP.loucasObs||"";
+  if(chave==="observacoes")return (CFG_PROP.observacoes||[]).join("\n");
+  return ""}
+function textoProposta(chave,o){const t=((o&&o.textos)||{})[chave];return t&&String(t).trim()?String(t).trim():textoPadrao(chave,o)}
 function aplicarConfig(v){CFG_PROP={...CFG_PADRAO,...(v||{})};CFG_PROP.pagamento={...CFG_PADRAO.pagamento,...((v&&v.pagamento)||{})};if(!Array.isArray(CFG_PROP.observacoes))CFG_PROP.observacoes=[]}
 const LOGO_H=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 174.9134 81.3701" role="img" aria-label="Saimon Novack"><g>
 <path transform="matrix(1,0,0,-1,1,80.3701)" d="M53.6567 52.6059V52.1731C53.1584 52.1206 52.666 52.0682 52.1813 52.0157 51.6957 51.9633 51.2563 51.8519 50.8629 51.6813 50.4694 51.5106 50.148 51.2614 49.8988 50.9338 49.6497 50.6058 49.5252 50.1531 49.5252 49.5763L49.4858 26.5757H48.738L22.4609 50.9383C20.1679 53.0643 18.87 54.5428 18.8076 57.3355 18.7801 58.5666 19.0956 59.726 19.6716 60.8131 20.2476 61.9002 21.047 62.85 22.0694 63.6619 23.0919 64.4743 24.3162 65.1161 25.7417 65.5875 27.1675 66.0591 28.73 66.295 30.4296 66.295 31.6681 66.295 32.885 66.164 34.0801 65.9018 35.2757 65.6399 36.3917 65.1946 37.4287 64.5659 38.0047 64.1991 38.4729 63.8977 38.8329 63.6619 39.1929 63.4263 39.5314 63.3084 39.8483 63.3084 40.1074 63.3084 40.3449 63.4133 40.5612 63.6228 40.7769 63.8323 40.9643 64.0811 41.1225 64.3694 41.2812 64.6577 41.4108 64.9587 41.5114 65.2734 41.6123 65.5875 41.6772 65.8366 41.7061 66.0197H42.3972V55.8422H41.7061C41.4179 57.126 41.0434 58.3311 40.5828 59.4575 40.1219 60.5837 39.5099 61.5662 38.7465 62.4044 37.9834 63.2429 37.0256 63.9045 35.8733 64.389 34.7213 64.8737 33.3099 65.1161 31.6392 65.1161 30.4872 65.1161 29.4934 64.9587 28.6583 64.6444 25.2595 63.3654 23.5709 58.5113 25.3103 55.7884 25.9296 54.8192 27.5703 53.5246 28.4734 52.6249L48.738 32.4366V49.5763C48.738 50.1795 48.587 50.6452 48.2856 50.9729 47.984 51.3009 47.6101 51.5438 47.1643 51.7011 46.7186 51.8584 46.2266 51.9633 45.6888 52.0157 45.1514 52.0682 44.646 52.1206 44.1737 52.1731V52.6059Z" fill="currentColor"/>
@@ -253,7 +260,7 @@ const MAP={
   insumos:{nome:"nome",unidade:"unidade",custo:"custo",exemplo:"exemplo"},
   fichas:{nome:"nome",categoria:"categoria",rendimento:"rendimento",porcoesPorPessoa:"porcoes_por_pessoa",itens:"itens",preparo:"preparo",exemplo:"exemplo"},
   clientes:{nome:"nome",telefone:"telefone",email:"email",aniversario:"aniversario",origem:"origem",pratoMarcante:"prato_marcante",restricoes:"restricoes",notas:"notas",consentimento:"consentimento",exemplo:"exemplo"},
-  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
+  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",textos:"textos",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
 };
 const NULAVEIS=new Set(["aniversario","data","cliente","nota","sinalAte"]);   // texto vazio vira null no banco
 const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota","garconsQtd","garconsValor","loucas","sinal"]);
@@ -457,6 +464,11 @@ function vOrc(keep){
       </tbody></table></div>`:'<p style="color:var(--muted);font-size:.85rem;margin:4px 0 0">Nenhum. Use para copeira, segurança, DJ e outros serviços cobrados à parte; cada um sai em linha própria na proposta.</p>'}
       <div style="margin-top:8px"><button type="button" class="btn sm" id="x_add" ${ro}>+ Adicionar serviço extra</button></div></div>
     <label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>
+    <div class="sec"><h3>Textos desta proposta</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">Em branco, a proposta usa os textos padrão (aba Usuários > Dados da proposta). Para mudar só neste evento, escreva aqui ou clique em "Usar o padrão como base" e edite.</p>
+    <div class="grid" style="grid-template-columns:1fr">
+      ${[["garcons","Observação dos garçons"],["loucas","Observação das louças"],["observacoes","Observações importantes (uma por linha)"]].map(([k,l])=>`<label class="f">${l}<textarea data-t="${k}" placeholder="${esc(textoPadrao(k,draft))}" ${k==="observacoes"?'style="min-height:120px"':""} ${ro}>${esc(((draft.textos||{})[k])||"")}</textarea><span><button type="button" class="btn ghost sm" data-tpad="${k}" ${ro}>Usar o padrão como base</button></span></label>`).join("")}
+    </div></div>
     ${avaliacao}
     <div class="sec" id="oout"></div>
   </div></div>`;
@@ -465,12 +477,14 @@ function vOrc(keep){
   $("#o_prop").onclick=()=>{subtab="proposta";renderOrcOut();const o=$("#oout");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})};
   $("#o_del").onclick=()=>confirmBox("Excluir este orçamento? Essa ação não pode ser desfeita.",async()=>{await del("orcamentos/"+selOrc);selOrc=null;draft=null;render()});
   $("#x_add").onclick=()=>{draft.extras=[...(draft.extras||[]),{descricao:"",valor:0}];const st=subtab;vOrc(draft);subtab=st;renderOrcOut();const ult=document.querySelector('[data-xk="'+(draft.extras.length-1)+'"][data-xp="descricao"]');if(ult)ult.focus()};
+  document.querySelectorAll("[data-tpad]").forEach(b=>b.onclick=()=>{const k=b.dataset.tpad;const ta=document.querySelector('textarea[data-t="'+k+'"]');ta.value=textoPadrao(k,draft);draft.textos={...(draft.textos||{}),[k]:ta.value};ta.focus();renderOrcOut()});
   document.querySelectorAll("[data-xrm]").forEach(b=>b.onclick=()=>{draft.extras=(draft.extras||[]).filter((_,k)=>k!==+b.dataset.xrm);vOrc(draft)});
   renderOrcList();renderOrcOut();
 }
 function onOrcInput(e){
   const t=e.target;
   if(t.dataset.menu){const s=new Set(draft.cardapio||[]);t.checked?s.add(t.dataset.menu):s.delete(t.dataset.menu);draft.cardapio=[...s]}
+  else if(t.dataset.t){draft.textos={...(draft.textos||{}),[t.dataset.t]:t.value}}
   else if(t.dataset.xk!==undefined){const x=(draft.extras||[])[+t.dataset.xk];if(!x)return;x[t.dataset.xp]=t.dataset.xp==="valor"?(+t.value||0):t.value}
   else if(t.dataset.f){const f=t.dataset.f;draft[f]=t.type==="checkbox"?t.checked:t.type==="number"?(t.value===""?0:+t.value):t.value;
     if(f==="etapa"&&e.type==="change"){vOrc(draft);return}}
@@ -503,14 +517,14 @@ function renderOrcOut(){
     const pg=CFG_PROP.pagamento&&Object.values(CFG_PROP.pagamento).some(v=>String(v||"").trim())?CFG_PROP.pagamento:null;const qg=+draft.garconsQtd||0;
     const prev=[...r.estacoes.map(e=>`<div><span>${esc(e.cat)}</span><b class="num">${brl(e.valor)}</b></div>`),
       (!r.estacoes.length||r.gastronomiaResto>0.005)?`<div><span>Gastronomia${r.estacoes.length?"<small>Demais itens do menu, equipe de cozinha e logística</small>":"<small>Menu completo, equipe de cozinha e logística</small>"}</span><b class="num">${brl(r.gastronomiaResto)}</b></div>`:"",
-      r.loucas>0?`<div><span>Louças${CFG_PROP.loucasObs?`<small>${esc(CFG_PROP.loucasObs)}</small>`:""}</span><b class="num">${brl(r.loucas)}</b></div>`:"",
-      r.garcons>0?`<div><span>Garçons<small>${qg>0?`${num(qg,0)} ${qg===1?"profissional":"profissionais"} para servir alimentação e bebida, deslocamento incluso.`:""}${CFG_PROP.garconsObs?" "+esc(CFG_PROP.garconsObs):""}</small></span><b class="num">${brl(r.garcons)}</b></div>`:"",
+      r.loucas>0?`<div><span>Louças${textoProposta("loucas",draft)?`<small>${esc(textoProposta("loucas",draft))}</small>`:""}</span><b class="num">${brl(r.loucas)}</b></div>`:"",
+      r.garcons>0?`<div><span>Garçons${textoProposta("garcons",draft)?`<small>${esc(textoProposta("garcons",draft))}</small>`:""}</span><b class="num">${brl(r.garcons)}</b></div>`:"",
       ...r.extras.filter(x=>x.valor>0).map(x=>`<div><span>${esc(x.descricao||"Serviço extra")}</span><b class="num">${brl(x.valor)}</b></div>`),
       `<div class="tot"><span>Valor total</span><b class="num">${brl(r.total)}</b></div>`,
       `<div style="border-bottom:0;padding-top:0"><span style="color:#C9C3B6">Por convidado</span><b class="num" style="color:#C9C3B6">${brl(r.porPessoa)}</b></div>`].filter(Boolean).join("");
     const pagto=[(+draft.sinal||0)>0?`<p>Solicitamos um sinal de <b>${brl(draft.sinal)}</b> para garantia da data${draft.sinalAte?", até "+dataBR(draft.sinalAte):""}, valor não reembolsável em caso de cancelamento.</p>`:"",
       pg?`<p>Pagamento na conta do contratado: ${esc(pg.empresa||"")}${pg.cnpj?", CNPJ "+esc(pg.cnpj):""}${pg.banco?" · "+esc(pg.banco):""}${pg.agencia?" · Agência "+esc(pg.agencia):""}${pg.conta?" · Conta "+esc(pg.conta):""}${pg.pix?" · PIX "+esc(pg.pix):""}.</p>`:""].filter(Boolean).join("");
-    const obs=(CFG_PROP.observacoes||[]).map(t=>`<p>${esc(t)}</p>`).join("");
+    const obs=textoProposta("observacoes",draft).split("\n").map(t=>t.trim()).filter(Boolean).map(t=>`<p>${esc(t)}</p>`).join("");
     body=`<div class="prop"><div class="logo" aria-label="Saimon Novack">${LOGO_H}</div>
       <h2>Proposta gastronômica</h2>
       <div class="meta"><div><span>Cliente</span><b>${esc(c?c.nome:"")}</b></div><div><span>Ocasião</span><b>${esc(draft.tipoEvento||draft.servico||"")}</b></div>
