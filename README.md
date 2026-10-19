@@ -132,6 +132,10 @@ npx supabase db push --include-seed
 
 Dados que mudam a cada evento (horário, local, sinal e data limite, serviço extra como copeira) ficam no próprio orçamento. Na prévia de orçamento da proposta, a gastronomia sai separada de louças, garçons e serviço extra. Quando o cardápio tem pratos em alguma "Estação" (boas-vindas, quentes, sobremesas), a estação aparece em linha própria, com a fatia da gastronomia proporcional ao custo de insumos dela; o restante do menu fica na linha "Gastronomia".
 
+## Proposta em PDF e em DOCX
+
+Na aba Proposta do orçamento há três saídas. **Salvar em PDF** usa a impressão do navegador com layout próprio: página A4 inteira em carvão, margens escuras repetidas em cada página (a proposta fica dentro de uma tabela cujo cabeçalho e rodapé vazios o navegador repete) e cores forçadas na impressão, então não é preciso marcar "imprimir fundo". **Baixar em DOCX** monta o documento no próprio navegador com a biblioteca `docx` (carregada do CDN só nesse clique) e baixa um Word editável com a mesma estrutura: logo, dados do evento, menu, prévia de orçamento, pagamento, condições, observações e validade. **Enviar pelo WhatsApp** abre a conversa com o resumo escrito.
+
 ## LGPD
 
 O campo "restrições e alergias" é dado de saúde (dado pessoal sensível, art. 11 da LGPD). A empresa do Saimon é a controladora; o Rafael, como quem opera a infraestrutura, é operador. Pendências:
