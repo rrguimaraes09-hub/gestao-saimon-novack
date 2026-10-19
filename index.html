@@ -230,7 +230,8 @@ function calc(o){
   const equipe=+o.equipe||0;
   const garcons=(+o.garconsQtd||0)*(+o.garconsValor||0);
   const loucas=+o.loucas||0;
-  const outros=+o.outrosValor||0;
+  const extras=(o.extras||[]).map(x=>({descricao:String(x.descricao||"").trim(),valor:+x.valor||0}));
+  const outros=extras.reduce((a,x)=>a+x.valor,0);
   const terceiros=garcons+loucas+outros;
   const sugerido=insumos/cmv+equipe+terceiros;
   const total=+o.precoFinal>0?+o.precoFinal:sugerido;
@@ -242,7 +243,7 @@ function calc(o){
   const gastronomiaResto=gastronomia-estacoes.reduce((a,e)=>a+e.valor,0);
   const compras={};
   linhas.forEach(l=>(l.f.itens||[]).forEach(it=>{compras[it.insumo]=(compras[it.insumo]||0)+(+it.qtd||0)*l.fator}));
-  return {n,linhas,insumos,equipe,garcons,loucas,outros,terceiros,gastronomia,estacoes,gastronomiaResto,sugerido,total,porPessoa:n?total/n:0,cmvReal:total?insumos/total*100:0,compras};
+  return {n,linhas,insumos,equipe,garcons,loucas,extras,outros,terceiros,gastronomia,estacoes,gastronomiaResto,sugerido,total,porPessoa:n?total/n:0,cmvReal:total?insumos/total*100:0,compras};
 }
 
 /* ---------- camada de dados (Supabase) ----------
@@ -252,10 +253,10 @@ const MAP={
   insumos:{nome:"nome",unidade:"unidade",custo:"custo",exemplo:"exemplo"},
   fichas:{nome:"nome",categoria:"categoria",rendimento:"rendimento",porcoesPorPessoa:"porcoes_por_pessoa",itens:"itens",preparo:"preparo",exemplo:"exemplo"},
   clientes:{nome:"nome",telefone:"telefone",email:"email",aniversario:"aniversario",origem:"origem",pratoMarcante:"prato_marcante",restricoes:"restricoes",notas:"notas",consentimento:"consentimento",exemplo:"exemplo"},
-  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",outrosDescricao:"outros_descricao",outrosValor:"outros_valor",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
+  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
 };
 const NULAVEIS=new Set(["aniversario","data","cliente","nota","sinalAte"]);   // texto vazio vira null no banco
-const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota","garconsQtd","garconsValor","loucas","sinal","outrosValor"]);
+const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota","garconsQtd","garconsValor","loucas","sinal"]);
 function toRow(col,obj){
   const row={};
   for(const [k,c] of Object.entries(MAP[col])){
@@ -438,20 +439,24 @@ function vOrc(keep){
       </div></div>
     <div class="sec"><h3>Cardápio</h3><div class="menu">${menu||'<span style="color:var(--muted)">Cadastre fichas técnicas para montar o cardápio.</span>'}</div></div>
     <div class="sec"><h3>Preço</h3>
-    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, impostos e a sua margem. Garçons, louças e o serviço extra são terceirizados e têm campos próprios, somados por fora e mostrados em linhas separadas na proposta; "Equipe e logística" é o custo interno (sua equipe, transporte) e entra na linha Gastronomia.</p>
+    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, impostos e a sua margem. Garçons, louças e os serviços extras são terceirizados e têm campos próprios, somados por fora e mostrados em linhas separadas na proposta; "Equipe e logística" é o custo interno (sua equipe, transporte) e entra na linha Gastronomia.</p>
     <div class="grid">
       <label class="f">CMV alvo (% do preço que vai para insumos)<input type="number" min="5" max="90" data-f="cmv" value="${+draft.cmv||30}"></label>
       <label class="f">Equipe e logística, interno (R$)<input type="number" min="0" step="10" data-f="equipe" value="${+draft.equipe||0}"></label>
       <label class="f">Garçons terceirizados (quantidade)<input type="number" min="0" step="1" data-f="garconsQtd" value="${+draft.garconsQtd||0}"></label>
       <label class="f">Diária por garçom (R$)<input type="number" min="0" step="10" data-f="garconsValor" value="${+draft.garconsValor||0}"></label>
       <label class="f">Louças e utensílios terceirizados (R$)<input type="number" min="0" step="10" data-f="loucas" value="${+draft.loucas||0}"></label>
-      <label class="f">Serviço extra (descrição)<input data-f="outrosDescricao" value="${esc(draft.outrosDescricao)}" placeholder="Copeira, segurança…"></label>
-      <label class="f">Serviço extra (R$)<input type="number" min="0" step="10" data-f="outrosValor" value="${+draft.outrosValor||0}"></label>
       <label class="f">Sinal solicitado (R$)<input type="number" min="0" step="100" data-f="sinal" value="${+draft.sinal||""}" placeholder="para garantir a data"></label>
       <label class="f">Sinal até<input type="date" data-f="sinalAte" value="${esc(draft.sinalAte)}"></label>
       <label class="f">Preço final (R$, opcional)<input type="number" min="0" step="10" data-f="precoFinal" value="${+draft.precoFinal||""}" placeholder="usa o sugerido"></label>
       <label class="f">Valor já recebido (R$)<input type="number" min="0" step="10" data-f="pago" value="${+draft.pago||""}"></label>
-    </div><label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>
+    </div>
+    <div><span class="eyebrow">Serviços extras terceirizados</span>
+      ${(draft.extras||[]).length?`<div class="tbl"><table><thead><tr><th>Descrição</th><th class="r" style="width:150px">Valor (R$)</th><th style="width:40px"></th></tr></thead><tbody>
+        ${(draft.extras||[]).map((x,k)=>`<tr><td><input data-xk="${k}" data-xp="descricao" value="${esc(x.descricao)}" placeholder="Copeira, segurança, DJ…" ${ro}></td><td><input data-xk="${k}" data-xp="valor" type="number" min="0" step="10" value="${+x.valor||0}" ${ro}></td><td><button type="button" class="btn ghost sm" data-xrm="${k}" aria-label="Remover" ${ro}>✕</button></td></tr>`).join("")}
+      </tbody></table></div>`:'<p style="color:var(--muted);font-size:.85rem;margin:4px 0 0">Nenhum. Use para copeira, segurança, DJ e outros serviços cobrados à parte; cada um sai em linha própria na proposta.</p>'}
+      <div style="margin-top:8px"><button type="button" class="btn sm" id="x_add" ${ro}>+ Adicionar serviço extra</button></div></div>
+    <label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>
     ${avaliacao}
     <div class="sec" id="oout"></div>
   </div></div>`;
@@ -459,11 +464,14 @@ function vOrc(keep){
   $("#o_save").onclick=async()=>{if(await save("orcamentos/"+selOrc,draft))toast("Orçamento salvo.")};
   $("#o_prop").onclick=()=>{subtab="proposta";renderOrcOut();const o=$("#oout");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})};
   $("#o_del").onclick=()=>confirmBox("Excluir este orçamento? Essa ação não pode ser desfeita.",async()=>{await del("orcamentos/"+selOrc);selOrc=null;draft=null;render()});
+  $("#x_add").onclick=()=>{draft.extras=[...(draft.extras||[]),{descricao:"",valor:0}];const st=subtab;vOrc(draft);subtab=st;renderOrcOut();const ult=document.querySelector('[data-xk="'+(draft.extras.length-1)+'"][data-xp="descricao"]');if(ult)ult.focus()};
+  document.querySelectorAll("[data-xrm]").forEach(b=>b.onclick=()=>{draft.extras=(draft.extras||[]).filter((_,k)=>k!==+b.dataset.xrm);vOrc(draft)});
   renderOrcList();renderOrcOut();
 }
 function onOrcInput(e){
   const t=e.target;
   if(t.dataset.menu){const s=new Set(draft.cardapio||[]);t.checked?s.add(t.dataset.menu):s.delete(t.dataset.menu);draft.cardapio=[...s]}
+  else if(t.dataset.xk!==undefined){const x=(draft.extras||[])[+t.dataset.xk];if(!x)return;x[t.dataset.xp]=t.dataset.xp==="valor"?(+t.value||0):t.value}
   else if(t.dataset.f){const f=t.dataset.f;draft[f]=t.type==="checkbox"?t.checked:t.type==="number"?(t.value===""?0:+t.value):t.value;
     if(f==="etapa"&&e.type==="change"){vOrc(draft);return}}
   else return;
@@ -494,10 +502,10 @@ function renderOrcOut(){
   else{const c=byId("clientes",draft.cliente);const pratos=CATS.map(cat=>{const fs=r.linhas.filter(l=>l.f.categoria===cat);return fs.length?`<div class="pc">${cat}</div>${fs.map(l=>`<div class="pi">${esc(l.f.nome)}</div>`).join("")}`:""}).join("");
     const pg=CFG_PROP.pagamento&&Object.values(CFG_PROP.pagamento).some(v=>String(v||"").trim())?CFG_PROP.pagamento:null;const qg=+draft.garconsQtd||0;
     const prev=[...r.estacoes.map(e=>`<div><span>${esc(e.cat)}</span><b class="num">${brl(e.valor)}</b></div>`),
-      `<div><span>Gastronomia${r.estacoes.length?"<small>Demais itens do menu, equipe de cozinha e logística</small>":"<small>Menu completo, equipe de cozinha e logística</small>"}</span><b class="num">${brl(r.gastronomiaResto)}</b></div>`,
+      (!r.estacoes.length||r.gastronomiaResto>0.005)?`<div><span>Gastronomia${r.estacoes.length?"<small>Demais itens do menu, equipe de cozinha e logística</small>":"<small>Menu completo, equipe de cozinha e logística</small>"}</span><b class="num">${brl(r.gastronomiaResto)}</b></div>`:"",
       r.loucas>0?`<div><span>Louças${CFG_PROP.loucasObs?`<small>${esc(CFG_PROP.loucasObs)}</small>`:""}</span><b class="num">${brl(r.loucas)}</b></div>`:"",
       r.garcons>0?`<div><span>Garçons<small>${qg>0?`${num(qg,0)} ${qg===1?"profissional":"profissionais"} para servir alimentação e bebida, deslocamento incluso.`:""}${CFG_PROP.garconsObs?" "+esc(CFG_PROP.garconsObs):""}</small></span><b class="num">${brl(r.garcons)}</b></div>`:"",
-      r.outros>0?`<div><span>${esc(draft.outrosDescricao||"Outros serviços")}</span><b class="num">${brl(r.outros)}</b></div>`:"",
+      ...r.extras.filter(x=>x.valor>0).map(x=>`<div><span>${esc(x.descricao||"Serviço extra")}</span><b class="num">${brl(x.valor)}</b></div>`),
       `<div class="tot"><span>Valor total</span><b class="num">${brl(r.total)}</b></div>`,
       `<div style="border-bottom:0;padding-top:0"><span style="color:#C9C3B6">Por convidado</span><b class="num" style="color:#C9C3B6">${brl(r.porPessoa)}</b></div>`].filter(Boolean).join("");
     const pagto=[(+draft.sinal||0)>0?`<p>Solicitamos um sinal de <b>${brl(draft.sinal)}</b> para garantia da data${draft.sinalAte?", até "+dataBR(draft.sinalAte):""}, valor não reembolsável em caso de cancelamento.</p>`:"",
@@ -526,7 +534,7 @@ function renderOrcOut(){
     <div class="kpi"><span>Por convidado</span><b class="num">${brl(r.porPessoa)}</b></div>
     <div class="kpi" title="Fatia do preço da proposta que os insumos ocupam"><span>CMV real</span><b class="num" style="color:${r.cmvReal>40?"var(--bad)":r.cmvReal>32?"var(--warn)":"var(--ok)"}">${num(r.cmvReal,1)}%</b></div>
     <div class="kpi"><span>Saldo a receber</span><b class="num">${brl(Math.max(0,saldo))}</b></div></div>
-  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística + garçons + louças + serviço extra (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)} + ${brl(r.garcons)} + ${brl(r.loucas)} + ${brl(r.outros)}). Na proposta, a gastronomia (${brl(r.gastronomia)}) aparece separada de garçons, louças e extras. CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
+  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística + garçons + louças + serviços extras (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)} + ${brl(r.garcons)} + ${brl(r.loucas)} + ${brl(r.outros)}). Na proposta, a gastronomia (${brl(r.gastronomia)}) aparece separada de garçons, louças e extras. CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
   <div class="tabs" role="tablist">${T.map(([k,l])=>`<button role="tab" data-st="${k}" aria-selected="${subtab===k}">${l}</button>`).join("")}</div>${body}`;
   el.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(b){subtab=b.dataset.st;renderOrcOut()}};
   const pr=$("#o_print");if(pr)pr.onclick=()=>print();
@@ -542,10 +550,10 @@ function linkWhatsProposta(c,o,r){
     `${o.tipoEvento||o.servico||"Evento"} em ${dataBR(o.data)}${o.cidade?", "+o.cidade:""}, ${num(r.n,0)} convidados.`,
     pratos?`Cardápio: ${pratos}.`:"",
     ...r.estacoes.map(e=>`${e.cat}: ${brl(e.valor)}.`),
-    `Gastronomia: ${brl(r.gastronomiaResto)}.`,
+    (!r.estacoes.length||r.gastronomiaResto>0.005)?`Gastronomia: ${brl(r.gastronomiaResto)}.`:"",
     r.loucas>0?`Louças: ${brl(r.loucas)}.`:"",
     r.garcons>0?`Garçons (${num(+o.garconsQtd,0)}): ${brl(r.garcons)}.`:"",
-    r.outros>0?`${o.outrosDescricao||"Outros serviços"}: ${brl(r.outros)}.`:"",
+    ...r.extras.filter(x=>x.valor>0).map(x=>`${x.descricao||"Serviço extra"}: ${brl(x.valor)}.`),
     `Valor total: ${brl(r.total)} (${brl(r.porPessoa)} por convidado).`,
     (+o.sinal||0)>0?`Sinal para garantir a data: ${brl(o.sinal)}${o.sinalAte?" até "+dataBR(o.sinalAte):""}.`:"",
     o.condicoes?o.condicoes:"",
