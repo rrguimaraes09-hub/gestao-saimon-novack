@@ -155,6 +155,30 @@ td input,td select{padding:6px 8px;border:1px solid var(--line);border-radius:6p
 .pgap{height:0}
 .ptbl .prop{margin:0;max-width:none}
 
+/* Folhas impressas em fundo branco: ficha técnica e ordem de produção (montadas em #printarea só na hora de imprimir) */
+#printarea{display:none}
+.doc{color:#1B1A1A;font:10.5pt/1.45 var(--body);background:#fff}
+.doc .dh{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:1.5pt solid #1B1A1A;padding-bottom:8px;margin-bottom:14px}
+.doc .dh svg{height:36px;width:auto;color:#1B1A1A;display:block}
+.doc .dh .k{font-size:8pt;letter-spacing:.16em;text-transform:uppercase;color:#76713F;font-weight:600;text-align:right}
+.doc h1{font-family:var(--display);font-size:19pt;font-weight:600;margin:0 0 4px}
+.doc h2{font-family:var(--display);font-size:13pt;font-weight:600;margin:0 0 2px}
+.doc .m{display:flex;flex-wrap:wrap;gap:3px 22px;font-size:9.5pt;color:#555;margin:0 0 10px}
+.doc .m b{color:#1B1A1A;font-weight:600}
+.doc .k2{font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#76713F;font-weight:600;margin:16px 0 4px}
+.doc table{width:100%;border-collapse:collapse;font-size:10pt;margin:6px 0 8px}
+.doc th{font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;color:#6B675E;font-weight:600;text-align:left;border-bottom:1pt solid #1B1A1A;padding:5px 6px}
+.doc td{border-bottom:.5pt solid #D8D1C3;padding:5px 6px;vertical-align:top}
+.doc td.r,.doc th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.doc td.ck,.doc th.ck{width:22px;padding-right:0}
+.doc .bx{display:inline-block;width:10px;height:10px;border:1pt solid #1B1A1A;vertical-align:-1px}
+.doc tfoot td{font-weight:600;border-bottom:0}
+.doc .prep{white-space:pre-wrap;font-size:10pt;border-left:2pt solid #A09C6B;padding:4px 10px;margin:6px 0 0}
+.doc .dsec{break-inside:avoid;margin-top:14px}
+.doc .alerta{border:1pt solid #A3392B;color:#A3392B;padding:7px 10px;font-size:10pt;margin:0 0 12px}
+.doc .rod{margin-top:18px;font-size:8pt;color:#6B675E}
+.doc .pg+.pg{break-before:page}
+
 /* Clientes */
 .bdays{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:22px}
 .bday{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:center}
@@ -530,7 +554,7 @@ function renderOrcOut(){
     body=`<div class="tbl"><table><thead><tr><th>Insumo</th><th class="r">Quantidade</th><th class="r">Custo unitário</th><th class="r">Subtotal</th></tr></thead><tbody>
     ${rows.map(({i,q})=>`<tr><td>${esc(i.nome)}</td><td class="r">${num(q,3)} ${esc(i.unidade)}</td><td class="r">${brl(i.custo)}/${esc(i.unidade)}</td><td class="r">${brl(q*i.custo)}</td></tr>`).join("")}
     </tbody><tfoot><tr><td colspan="3">Total da compra</td><td class="r">${brl(r.insumos)}</td></tr></tfoot></table></div>`}
-  else if(subtab==="producao")body=r.linhas.map(l=>`<div style="margin-top:12px"><h3>${esc(l.f.nome)} <span class="chip gold num">× ${num(l.fator)} receitas · ${num(l.porcoes,0)} porções</span></h3>
+  else if(subtab==="producao")body=`<div class="noprint" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;flex-wrap:wrap"><span style="color:var(--muted);font-size:.8rem;align-self:center">Sai em folha branca, sem preços, para a cozinha.</span><button class="btn pri" id="o_ordem">Imprimir ou salvar em PDF</button></div>`+r.linhas.map(l=>`<div style="margin-top:12px"><h3>${esc(l.f.nome)} <span class="chip gold num">× ${num(l.fator)} receitas · ${num(l.porcoes,0)} porções</span></h3>
     <div class="tbl"><table><tbody>${(l.f.itens||[]).map(it=>{const i=byId("insumos",it.insumo);return i?`<tr><td>${esc(i.nome)}</td><td class="r">${num((+it.qtd||0)*l.fator,3)} ${esc(i.unidade)}</td></tr>`:""}).join("")}</tbody></table></div>
     ${l.f.preparo?`<p style="color:var(--muted);font-size:.85rem;white-space:pre-wrap">${esc(l.f.preparo)}</p>`:""}</div>`).join("");
   else{const c=byId("clientes",draft.cliente);const pratos=CATS.map(cat=>{const fs=r.linhas.filter(l=>l.f.categoria===cat);return fs.length?`<div class="pc">${cat}</div>${fs.map(l=>`<div class="pi">${esc(l.f.nome)}</div>`).join("")}`:""}).join("");
@@ -571,7 +595,8 @@ function renderOrcOut(){
   <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística + garçons + louças + serviços extras (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)} + ${brl(r.garcons)} + ${brl(r.loucas)} + ${brl(r.outros)}). Na proposta, a gastronomia (${brl(r.gastronomia)}) aparece separada de garçons, louças e extras. CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
   <div class="tabs" role="tablist">${T.map(([k,l])=>`<button role="tab" data-st="${k}" aria-selected="${subtab===k}">${l}</button>`).join("")}</div>${body}`;
   el.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(b){subtab=b.dataset.st;renderOrcOut()}};
-  const pr=$("#o_print");if(pr)pr.onclick=()=>print();
+  const pr=$("#o_print");if(pr)pr.onclick=()=>{limparImpressao();print()};
+  const od=$("#o_ordem");if(od)od.onclick=()=>{const c=byId("clientes",draft.cliente);imprimirDoc(htmlOrdem(c,draft,r),`Ordem de produção ${(c&&c.nome)||""} ${dataBR(draft.data)}`.trim())};
   const dx=$("#o_docx");if(dx)dx.onclick=()=>{const c=byId("clientes",draft.cliente);baixarDocx(c,draft,r)};
   const wa=$("#o_whats");if(wa)wa.onclick=()=>{const c=byId("clientes",draft.cliente);const url=linkWhatsProposta(c,draft,r);if(url)window.open(url,"_blank","noopener")};
 }
@@ -594,6 +619,54 @@ function linkWhatsProposta(c,o,r){
     o.condicoes?o.condicoes:"",
     "Envio a proposta completa em PDF na sequência."].filter(Boolean);
   return `https://wa.me/${tel}?text=${encodeURIComponent(linhas.join("\n"))}`;
+}
+
+/* ---------- Impressão em folha branca (ficha técnica, ordem de produção) ---------- */
+let prefCustos=true;try{prefCustos=localStorage.getItem("sn_print_custos")!=="0"}catch(e){}
+function setPrefCustos(v){prefCustos=!!v;try{localStorage.setItem("sn_print_custos",v?"1":"0")}catch(e){}}
+const hojeBR=()=>new Date().toLocaleDateString("pt-BR");
+const porcoesTxt=v=>`${num(v)} ${+v===1?"porção":"porções"}`;
+let tituloOriginal=document.title;
+function limparImpressao(){const a=document.getElementById("printarea");if(a)a.remove();const st=document.getElementById("print-doc-style");if(st)st.remove();document.title=tituloOriginal}
+// Monta a folha em #printarea, troca a página da impressão para A4 branca com margens e abre a impressão.
+// O título da página vira o nome sugerido do PDF.
+function imprimirDoc(html,titulo){
+  limparImpressao();tituloOriginal=document.title;
+  const area=document.createElement("div");area.id="printarea";area.className="doc";area.innerHTML=html;document.body.appendChild(area);
+  const st=document.createElement("style");st.id="print-doc-style";
+  st.textContent="@page{size:A4;margin:14mm 14mm 16mm}@media print{html,body{background:#fff!important}body>*:not(#printarea){display:none!important}#printarea{display:block!important}}";
+  document.head.appendChild(st);
+  if(titulo)document.title=String(titulo).replace(/[\\/:*?"<>|]+/g,"-");
+  window.addEventListener("afterprint",limparImpressao,{once:true});
+  setTimeout(()=>print(),60);
+}
+function htmlFicha(f,comCustos){
+  const itens=(f.itens||[]).map(it=>{const i=byId("insumos",it.insumo);return {nome:i?i.nome:"(insumo removido)",un:i?i.unidade:"",qtd:+it.qtd||0,cu:i?(+i.custo||0):0}});
+  const custo=custoFicha(f);const cols=comCustos?4:2;
+  return `<section class="pg"><div class="dh">${LOGO_H}<div class="k">Ficha técnica</div></div>
+    <h1>${esc(f.nome||"Sem nome")}</h1>
+    <div class="m"><span>Categoria <b>${esc(f.categoria||"")}</b></span><span>Rendimento <b>${porcoesTxt(f.rendimento||0)}</b></span><span>Por convidado <b>${porcoesTxt(f.porcoesPorPessoa||1)}</b></span>${comCustos?`<span>Custo da receita <b>${brl(custo)}</b></span><span>Custo por porção <b>${brl(+f.rendimento?custo/f.rendimento:0)}</b></span>`:""}</div>
+    <table><thead><tr><th>Insumo</th><th class="r">Quantidade</th>${comCustos?'<th class="r">Custo unitário</th><th class="r">Custo</th>':""}</tr></thead><tbody>
+    ${itens.map(x=>`<tr><td>${esc(x.nome)}</td><td class="r">${num(x.qtd,3)} ${esc(x.un)}</td>${comCustos?`<td class="r">${brl(x.cu)}/${esc(x.un)}</td><td class="r">${brl(x.qtd*x.cu)}</td>`:""}</tr>`).join("")||`<tr><td colspan="${cols}">Nenhum insumo cadastrado.</td></tr>`}
+    </tbody>${comCustos?`<tfoot><tr><td colspan="3">Custo da receita</td><td class="r">${brl(custo)}</td></tr></tfoot>`:""}</table>
+    ${String(f.preparo||"").trim()?`<div class="k2">Modo de preparo e observações</div><div class="prep">${esc(f.preparo)}</div>`:""}
+    <div class="rod">Saimon Novack · impresso em ${hojeBR()}</div></section>`;
+}
+function htmlOrdem(c,o,r){
+  const meta=[["Cliente",c?c.nome:""],["Data",dataBR(o.data)+(o.horario?" · "+o.horario:"")],["Convidados",num(r.n,0)],["Local",[o.cidade,o.local].filter(Boolean).join(" · ")]].filter(x=>String(x[1]||"").trim());
+  const rest=c&&String(c.restricoes||"").trim();
+  const grupos=CATS.map(cat=>({cat,ls:r.linhas.filter(l=>l.f.categoria===cat)})).filter(g=>g.ls.length);
+  return `<div class="dh">${LOGO_H}<div class="k">Ordem de produção</div></div>
+    <h1>${esc(o.tipoEvento||o.servico||"Evento")}</h1>
+    <div class="m">${meta.map(([l,v])=>`<span>${l} <b>${esc(v)}</b></span>`).join("")}</div>
+    ${rest?`<div class="alerta"><b>Restrições e alergias informadas pelo cliente:</b> ${esc(rest)}</div>`:""}
+    ${grupos.map(g=>`<div class="k2">${esc(g.cat)}</div>`+g.ls.map(l=>`<div class="dsec"><h2>${esc(l.f.nome)}</h2>
+      <div class="m"><span>Porções <b>${num(l.porcoes,0)}</b></span><span>Receitas <b>× ${num(l.fator)}</b></span><span>Cada receita rende <b>${porcoesTxt(l.f.rendimento||0)}</b></span></div>
+      <table><thead><tr><th class="ck"></th><th>Insumo</th><th class="r">Quantidade</th></tr></thead><tbody>
+      ${(l.f.itens||[]).map(it=>{const i=byId("insumos",it.insumo);return i?`<tr><td class="ck"><span class="bx"></span></td><td>${esc(i.nome)}</td><td class="r">${num((+it.qtd||0)*l.fator,3)} ${esc(i.unidade)}</td></tr>`:""}).join("")}
+      </tbody></table>
+      ${String(l.f.preparo||"").trim()?`<div class="prep">${esc(l.f.preparo)}</div>`:""}</div>`).join("")).join("")}
+    <div class="rod">Saimon Novack · impresso em ${hojeBR()}</div>`;
 }
 
 /* ---------- Proposta em DOCX ---------- */
@@ -672,9 +745,12 @@ function vFichas(){
   const rows=CATS.map(cat=>{const fs=S.fichas.filter(f=>f.categoria===cat).sort((a,b)=>a.nome.localeCompare(b.nome));if(!fs.length)return"";
     return `<tr><td colspan="5" class="eyebrow" style="padding-top:18px">${cat}</td></tr>`+fs.map(f=>{const c=custoFicha(f);
       return `<tr><td><a href="#" data-fi="${f.id}" style="color:var(--ink);font-weight:600">${esc(f.nome)}</a>${exChip(f)}</td><td class="r">${num(f.rendimento,0)} porções</td><td class="r">${num(f.porcoesPorPessoa||1)}</td><td class="r">${brl(c)}</td><td class="r">${brl(f.rendimento?c/f.rendimento:0)}</td></tr>`}).join("")}).join("");
-  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Fichas técnicas</span><h2>Receitas, rendimento e custo</h2><p>O orçamento usa o rendimento e a porção por convidado de cada ficha. Custo atualiza sozinho quando o preço de um insumo muda.</p></div><button class="btn pri" id="nf" ${ro}>Nova ficha</button></div>
+  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Fichas técnicas</span><h2>Receitas, rendimento e custo</h2><p>O orçamento usa o rendimento e a porção por convidado de cada ficha. Custo atualiza sozinho quando o preço de um insumo muda.</p></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="ck" style="font-size:.82rem;color:var(--muted)"><input type="checkbox" id="fp_custos" ${prefCustos?"checked":""}> imprimir com custos</label><button class="btn" id="fprint" ${S.fichas.length?"":"disabled"}>Imprimir fichas</button><button class="btn pri" id="nf" ${ro}>Nova ficha</button></div></div>
   ${S.fichas.length?`<div class="panel tbl"><table><thead><tr><th>Prato</th><th class="r">Rendimento</th><th class="r">Porções por convidado</th><th class="r">Custo da receita</th><th class="r">Custo por porção</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Nenhuma ficha técnica. Cadastre os insumos e depois a primeira ficha.</div>'}`;
   $("#nf").onclick=()=>modalFicha(null);
+  $("#fp_custos").onchange=e=>setPrefCustos(e.target.checked);
+  $("#fprint").onclick=()=>{const fs=CATS.flatMap(cat=>S.fichas.filter(f=>f.categoria===cat).sort((a,b)=>a.nome.localeCompare(b.nome)));
+    const outras=S.fichas.filter(f=>!CATS.includes(f.categoria));imprimirDoc([...fs,...outras].map(f=>htmlFicha(f,prefCustos)).join(""),"Fichas técnicas Saimon Novack")};
   document.querySelectorAll("[data-fi]").forEach(a=>a.onclick=e=>{e.preventDefault();modalFicha(a.dataset.fi)});
 }
 function modalFicha(id){
@@ -692,13 +768,15 @@ function modalFicha(id){
       </tbody><tfoot><tr><td colspan="2">Custo da receita</td><td class="r">${brl(custoFicha(f))}</td><td></td></tr></tfoot></table></div>
       <div><button type="button" class="btn sm" id="f_add" ${S.insumos.length?"":"disabled"}>Adicionar insumo</button></div>
       <label class="f">Modo de preparo e observações<textarea id="f_prep">${esc(f.preparo)}</textarea></label>
-      <div class="acts">${id?'<button type="button" class="btn ghost" id="f_del">Excluir</button>':""}<button type="button" class="btn ghost" id="f_x">Cancelar</button><button class="btn pri" ${canWrite?"":"disabled"}>Salvar ficha</button></div>
+      <div class="acts"><label class="ck" style="margin-right:auto;font-size:.82rem;color:var(--muted)"><input type="checkbox" id="f_pc" ${prefCustos?"checked":""}> imprimir com custos</label><button type="button" class="btn" id="f_print">Imprimir ou PDF</button>${id?'<button type="button" class="btn ghost" id="f_del">Excluir</button>':""}<button type="button" class="btn ghost" id="f_x">Cancelar</button><button class="btn pri" ${canWrite?"":"disabled"}>Salvar ficha</button></div>
     </form></div>`;
     const sync=()=>{f.nome=$("#f_nome").value;f.categoria=$("#f_cat").value;f.rendimento=+$("#f_rend").value||1;f.porcoesPorPessoa=+$("#f_ppp").value||1;f.preparo=$("#f_prep").value};
     $("#ff").addEventListener("change",e=>{const t=e.target;if(t.dataset.p){sync();f.itens[+t.dataset.k][t.dataset.p]=t.dataset.p==="qtd"?+t.value:t.value;draw()}});
     $("#ff").onclick=e=>{const b=e.target.closest("[data-rm]");if(b){sync();f.itens.splice(+b.dataset.rm,1);draw()}};
     $("#f_add").onclick=()=>{sync();f.itens.push({insumo:S.insumos[0].id,qtd:0});draw()};
     $("#f_x").onclick=()=>$("#modal").innerHTML="";
+    $("#f_pc").onchange=e=>setPrefCustos(e.target.checked);
+    $("#f_print").onclick=()=>{sync();imprimirDoc(htmlFicha(f,prefCustos),"Ficha técnica "+(f.nome||""))};
     if(id)$("#f_del").onclick=()=>confirmBox("Excluir esta ficha? Orçamentos que a usam perdem o prato.",async()=>{await del("fichas/"+id);$("#modal").innerHTML=""});
     $("#ff").onsubmit=async e=>{e.preventDefault();sync();if(!f.nome.trim()){toast("Dê um nome ao prato.");return}
       if(await save("fichas/"+(id||newId()),f)){$("#modal").innerHTML="";toast("Ficha salva.")}};
