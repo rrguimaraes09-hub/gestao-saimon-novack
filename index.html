@@ -121,6 +121,7 @@ th{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut
 td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
 tfoot td{font-weight:600;border-bottom:0}
+.busca{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:.92rem;width:240px;max-width:100%}
 td input,td select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);width:100%;min-width:0}
 
 /* Proposta */
@@ -784,15 +785,28 @@ function modalFicha(id){
 }
 
 /* ---------- Insumos ---------- */
+// Busca: guardada fora da tela para sobreviver ao redesenho do realtime; filtra escondendo linhas, sem redesenhar
+let buscaIns="";
+const semAcento=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+function filtrarInsumos(){
+  const q=semAcento(buscaIns).trim();let vis=0;
+  document.querySelectorAll("tr[data-i]").forEach(tr=>{const ok=!q||semAcento(tr.querySelector('[data-p="nome"]').value).includes(q);tr.hidden=!ok;if(ok)vis++});
+  const v=$("#ins_vazio");if(v)v.hidden=!!vis;
+}
 function vInsumos(){
   const ro=canWrite?"":"disabled";
+  const ativo=document.activeElement&&document.activeElement.id==="ins_busca"?document.activeElement.selectionStart:null;
   const rows=S.insumos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(i=>{const uso=S.fichas.filter(f=>(f.itens||[]).some(it=>it.insumo===i.id)).length;
     return `<tr data-i="${i.id}"><td><input data-p="nome" value="${esc(i.nome)}" ${ro}></td><td style="width:110px"><select data-p="unidade" ${ro}>${UNIDADES.map(u=>`<option ${u===i.unidade?"selected":""}>${u}</option>`).join("")}</select></td>
       <td style="width:150px"><input data-p="custo" type="number" step="0.01" min="0" value="${+i.custo||0}" ${ro}></td><td class="r" style="width:110px;color:var(--muted)">${uso} ficha${uso===1?"":"s"}${exChip(i)}</td>
       <td style="width:44px"><button class="btn ghost sm" data-del="${i.id}" ${uso||!canWrite?"disabled":""} aria-label="Excluir">✕</button></td></tr>`}).join("");
-  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Insumos</span><h2>Preços de compra</h2><p>Atualize o custo quando o fornecedor mudar o preço; fichas e orçamentos recalculam na hora. A alteração salva ao sair do campo.</p></div><button class="btn pri" id="ni" ${ro}>Novo insumo</button></div>
-  ${S.insumos.length?`<div class="panel tbl"><table><thead><tr><th>Insumo</th><th>Unidade</th><th>Custo (R$ por unidade)</th><th class="r">Uso</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Nenhum insumo. Cadastre o primeiro em "Novo insumo".</div>'}`;
-  $("#ni").onclick=async()=>{const id=newId();if(await save("insumos/"+id,{nome:"Novo insumo",unidade:"kg",custo:0}))toast("Insumo criado. Ajuste o nome e o custo.")};
+  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Insumos</span><h2>Preços de compra</h2><p>Atualize o custo quando o fornecedor mudar o preço; fichas e orçamentos recalculam na hora. A alteração salva ao sair do campo.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="search" class="busca" id="ins_busca" placeholder="Buscar insumo" aria-label="Buscar insumo" value="${esc(buscaIns)}"><button class="btn pri" id="ni" ${ro}>Novo insumo</button></div></div>
+  ${S.insumos.length?`<div class="panel tbl"><table><thead><tr><th>Insumo</th><th>Unidade</th><th>Custo (R$ por unidade)</th><th class="r">Uso</th><th></th></tr></thead><tbody>${rows}<tr id="ins_vazio" hidden><td colspan="5" style="color:var(--muted)">Nenhum insumo com esse nome.</td></tr></tbody></table></div>`:'<div class="empty">Nenhum insumo. Cadastre o primeiro em "Novo insumo".</div>'}`;
+  const bi=$("#ins_busca");bi.oninput=()=>{buscaIns=bi.value;filtrarInsumos()};
+  filtrarInsumos();
+  if(ativo!==null){bi.focus();bi.setSelectionRange(ativo,ativo)}
+  // Novo insumo limpa a busca para a linha nova aparecer
+  $("#ni").onclick=async()=>{buscaIns="";const id=newId();if(await save("insumos/"+id,{nome:"Novo insumo",unidade:"kg",custo:0}))toast("Insumo criado. Ajuste o nome e o custo.")};
   document.querySelectorAll("tr[data-i]").forEach(tr=>tr.addEventListener("change",async e=>{const p=e.target.dataset.p;if(!p)return;const i=byId("insumos",tr.dataset.i);
     await save("insumos/"+i.id,{...strip(i),[p]:p==="custo"?+e.target.value:e.target.value})}));
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>del("insumos/"+b.dataset.del));
