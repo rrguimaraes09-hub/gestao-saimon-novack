@@ -253,11 +253,11 @@ const LOGO_H=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 174.9134 81.3
 </g></svg>`;
 const ORIGENS=["Instagram","Site","WhatsApp","Indicação","Cliente anterior","Outro"];
 const UNIDADES=["kg","L","un","maço","dz"];
-const VIEWS=[["funil","Funil"],["orc","Orçamentos"],["fichas","Fichas técnicas"],["insumos","Insumos"],["clientes","Clientes"]];
+const VIEWS=[["funil","Funil"],["orc","Orçamentos"],["sp","Orçamentos SP"],["fichas","Fichas técnicas"],["insumos","Insumos"],["clientes","Clientes"]];
 const VIEW_ADMIN=["usuarios","Usuários"];
 const S={insumos:[],fichas:[],clientes:[],orcamentos:[]};
 const A={perfis:[],convites:[]};
-let sb=null,sessao=null,perfil=null,canal=null,canWrite=true,view="funil",selOrc=null,draft=null,subtab="custos",ready=false;
+let sb=null,sessao=null,perfil=null,canal=null,canWrite=true,view="funil",selOrc=null,draft=null,subtab="custos",ready=false,spSub="orc";
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -285,7 +285,9 @@ function calc(o){
   const extras=(o.extras||[]).map(x=>({descricao:String(x.descricao||"").trim(),valor:+x.valor||0}));
   const outros=extras.reduce((a,x)=>a+x.valor,0);
   const terceiros=garcons+loucas+outros;
-  const sugerido=insumos/cmv+equipe+terceiros;
+  // Orçamento SP: gastronomia a custo + garçons + custo de produção fechado (deslocamento, equipe, hospedagem e margem)
+  const sp=!!o.sp;const producao=sp?(+o.producao||0):0;
+  const sugerido=sp?insumos+producao+terceiros:insumos/cmv+equipe+terceiros;
   const total=+o.precoFinal>0?+o.precoFinal:sugerido;
   // Gastronomia = tudo que não é terceirizado (se houver preço final, ele absorve a diferença aqui)
   const gastronomia=Math.max(0,total-terceiros);
@@ -295,7 +297,7 @@ function calc(o){
   const gastronomiaResto=gastronomia-estacoes.reduce((a,e)=>a+e.valor,0);
   const compras={};
   linhas.forEach(l=>(l.f.itens||[]).forEach(it=>{compras[it.insumo]=(compras[it.insumo]||0)+(+it.qtd||0)*l.fator}));
-  return {n,linhas,insumos,equipe,garcons,loucas,extras,outros,terceiros,gastronomia,estacoes,gastronomiaResto,sugerido,total,porPessoa:n?total/n:0,cmvReal:total?insumos/total*100:0,compras};
+  return {n,linhas,insumos,sp,producao,equipe,garcons,loucas,extras,outros,terceiros,gastronomia,estacoes,gastronomiaResto,sugerido,total,porPessoa:n?total/n:0,cmvReal:total?insumos/total*100:0,compras};
 }
 
 /* ---------- camada de dados (Supabase) ----------
@@ -303,12 +305,12 @@ function calc(o){
    MAP traduz nos dois sentidos; só os campos listados vão para o banco. */
 const MAP={
   insumos:{nome:"nome",unidade:"unidade",custo:"custo",exemplo:"exemplo"},
-  fichas:{nome:"nome",categoria:"categoria",rendimento:"rendimento",porcoesPorPessoa:"porcoes_por_pessoa",itens:"itens",preparo:"preparo",exemplo:"exemplo"},
+  fichas:{nome:"nome",categoria:"categoria",rendimento:"rendimento",porcoesPorPessoa:"porcoes_por_pessoa",itens:"itens",preparo:"preparo",sp:"sp",exemplo:"exemplo"},
   clientes:{nome:"nome",telefone:"telefone",email:"email",aniversario:"aniversario",origem:"origem",pratoMarcante:"prato_marcante",restricoes:"restricoes",notas:"notas",consentimento:"consentimento",exemplo:"exemplo"},
-  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",textos:"textos",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
+  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",textos:"textos",sp:"sp",producao:"producao",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
 };
 const NULAVEIS=new Set(["aniversario","data","cliente","nota","sinalAte"]);   // texto vazio vira null no banco
-const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota","garconsQtd","garconsValor","loucas","sinal"]);
+const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota","garconsQtd","garconsValor","loucas","sinal","producao"]);
 function toRow(col,obj){
   const row={};
   for(const [k,c] of Object.entries(MAP[col])){
@@ -398,14 +400,14 @@ function renderNav(){
   if(sessao){const nome=perfil&&perfil.nome?perfil.nome:sessao.user.email;u.innerHTML=`<span title="${esc(sessao.user.email)}">${esc(nome)}</span><button id="sair">Sair</button>`;$("#sair").onclick=sair}
   else u.innerHTML="";
 }
-$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;view=b.dataset.v;if(view!=="orc"){draft=null}render();scrollTo(0,0)});
+$("#nav").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const ant=view;view=b.dataset.v;if(view!==ant||(view!=="orc"&&view!=="sp")){draft=null}render();scrollTo(0,0)});
 
 function render(){
   renderNav();
   if(!ready)return;
   if(view==="usuarios"&&!isAdmin())view="funil";
-  if(view==="orc"&&draft){renderOrcList();renderOrcOut();return}
-  ({funil:vFunil,orc:vOrc,fichas:vFichas,insumos:vInsumos,clientes:vClientes,usuarios:vUsuarios})[view]();
+  if((view==="orc"||view==="sp")&&draft){renderOrcList();renderOrcOut();return}
+  ({funil:vFunil,orc:()=>vOrc(),sp:vSP,fichas:()=>vFichas(),insumos:vInsumos,clientes:vClientes,usuarios:vUsuarios})[view]();
 }
 
 /* ---------- Funil ---------- */
@@ -415,7 +417,7 @@ function vFunil(){
     const items=S.orcamentos.filter(o=>(o.etapa||"pedido")===k).sort((a,b)=>(a.data||"9").localeCompare(b.data||"9"));
     const cards=items.map(o=>{const c=byId("clientes",o.cliente);const r=calc(o);
       return `<div class="card" data-o="${o.id}" tabindex="0">
-        <span class="t">${esc(c?c.nome:"Cliente sem cadastro")}${exChip(o)}</span>
+        <span class="t">${esc(c?c.nome:"Cliente sem cadastro")}${exChip(o)}${o.sp?' <span class="chip gold">SP</span>':""}</span>
         <span class="m">${esc(o.tipoEvento||o.servico||"")} · ${dataBR(o.data)} · ${num(o.convidados,0)} pessoas</span>
         ${r.linhas.length?`<span class="v num">${brl(r.total)}</span>`:`<span class="m">cardápio a montar</span>`}
         <select data-mv="${o.id}" aria-label="Mover etapa" ${ro}>${STAGES.map(([sk,sl])=>`<option value="${sk}" ${sk===k?"selected":""}>${sl}</option>`).join("")}</select>
@@ -429,12 +431,13 @@ function vFunil(){
   document.querySelectorAll(".card[data-o]").forEach(el=>{el.addEventListener("click",e=>{if(e.target.tagName==="SELECT")return;openOrc(el.dataset.o)});el.addEventListener("keydown",e=>{if(e.key==="Enter")openOrc(el.dataset.o)})});
   document.querySelectorAll("select[data-mv]").forEach(s=>s.addEventListener("change",async()=>{const o=byId("orcamentos",s.dataset.mv);if(o)await save("orcamentos/"+o.id,{...strip(o),etapa:s.value})}));
 }
-function openOrc(id){view="orc";selOrc=id;draft=null;subtab="custos";render();scrollTo(0,0)}
+function openOrc(id){const oo=byId("orcamentos",id);view=oo&&oo.sp?"sp":"orc";spSub="orc";selOrc=id;draft=null;subtab="custos";render();scrollTo(0,0)}
 
-function modalPedido(){
+function modalPedido(sp){
+  sp=sp===true;
   const opts=S.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join("");
   $("#modal").innerHTML=`<div class="ov"><form class="modal" id="fp">
-    <div><span class="eyebrow">Novo pedido</span><h2>Pedido de orçamento</h2></div>
+    <div><span class="eyebrow">${sp?"São Paulo":"Novo pedido"}</span><h2>${sp?"Novo orçamento SP":"Pedido de orçamento"}</h2></div>
     <div class="grid">
       <label class="f">Cliente<select id="p_cli"><option value="">+ Novo cliente</option>${opts}</select></label>
       <label class="f" id="p_nw">Nome do novo cliente<input id="p_nome" placeholder="Nome completo"></label>
@@ -442,10 +445,10 @@ function modalPedido(){
     </div>
     <div class="grid">
       <label class="f">Serviço<select id="p_serv">${SERVICOS.map(s=>`<option>${s}</option>`).join("")}</select></label>
-      <label class="f">Tipo de evento<input id="p_tipo" placeholder="Casamento, aniversário, corporativo…"></label>
+      <label class="f">${sp?"Ocasião":"Tipo de evento"}<input id="p_tipo" placeholder="Casamento, aniversário, corporativo…"></label>
       <label class="f">Data<input id="p_data" type="date"></label>
-      <label class="f">Cidade<input id="p_cid" value="Criciúma"></label>
-      <label class="f">Convidados<input id="p_n" type="number" min="1" value="50"></label>
+      <label class="f">Cidade<input id="p_cid" value="${sp?"São Paulo":"Criciúma"}"></label>
+      <label class="f">${sp?"Pessoas":"Convidados"}<input id="p_n" type="number" min="1" value="50"></label>
       <label class="f">Como conheceu<select id="p_or">${ORIGENS.map(s=>`<option>${s}</option>`).join("")}</select></label>
     </div>
     <div class="acts"><button type="button" class="btn ghost" id="p_x">Cancelar</button><button class="btn pri">Criar pedido</button></div>
@@ -457,29 +460,47 @@ function modalPedido(){
     if(!cli){const nome=$("#p_nome").value.trim();if(!nome){toast("Informe o nome do cliente.");return}
       cli=newId();if(!await save("clientes/"+cli,{nome,telefone:$("#p_tel").value.trim(),origem:$("#p_or").value,consentimento:false}))return}
     const id=newId();
-    const ok=await save("orcamentos/"+id,{cliente:cli,servico:$("#p_serv").value,tipoEvento:$("#p_tipo").value.trim(),data:$("#p_data").value,cidade:$("#p_cid").value.trim(),convidados:+$("#p_n").value||0,origem:$("#p_or").value,cardapio:[],cmv:30,equipe:0,precoFinal:0,pago:0,etapa:"pedido"});
-    if(ok){$("#modal").innerHTML="";toast("Pedido criado.")}};
+    const ok=await save("orcamentos/"+id,{cliente:cli,servico:$("#p_serv").value,tipoEvento:$("#p_tipo").value.trim(),data:$("#p_data").value,cidade:$("#p_cid").value.trim(),convidados:+$("#p_n").value||0,origem:$("#p_or").value,cardapio:[],cmv:30,equipe:0,precoFinal:0,pago:0,etapa:"pedido",...(sp?{sp:true}:{})});
+    if(ok){$("#modal").innerHTML="";toast(sp?"Orçamento SP criado.":"Pedido criado.");if(sp)openOrc(id)}};
 }
+
+/* ---------- Orçamentos SP (São Paulo) ----------
+   Mesma tela de orçamento, com lista, menu (fichas) e cálculo próprios.
+   Preço SP = gastronomia a custo + garçons + custo de produção fechado. */
+const ehSP=()=>view==="sp";
+const orcsDaAba=()=>S.orcamentos.filter(o=>!!o.sp===ehSP());
+function barraSP(){
+  const ro=canWrite?"":"disabled";
+  return `<div class="bar"><div><span class="eyebrow">São Paulo</span><h2>Orçamentos SP</h2><p>Menu próprio de São Paulo, garçons e um custo de produção fechado (passagens, furgão, equipe, hospedagem e margem). Preço = gastronomia + garçons + custo de produção.</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="sp_menu">${spSub==="menu"?"Ver orçamentos SP":"Menu SP (fichas)"}</button><button class="btn pri" id="sp_novo" ${ro}>Novo orçamento SP</button></div></div>`;
+}
+function ligarBarraSP(){
+  const m=$("#sp_menu");if(m)m.onclick=()=>{spSub=spSub==="menu"?"orc":"menu";draft=null;render();scrollTo(0,0)};
+  const n=$("#sp_novo");if(n)n.onclick=()=>modalPedido(true);
+}
+function vSP(){if(spSub==="menu")vFichas(true);else vOrc()}
 
 /* ---------- Orçamentos ---------- */
 function vOrc(keep){
-  if(!S.orcamentos.length){$("#app").innerHTML='<div class="empty">Nenhum orçamento. Crie um pedido no Funil.</div>';return}
-  if(!selOrc||!byId("orcamentos",selOrc))selOrc=S.orcamentos.slice().sort((a,b)=>(b.criadoEm||"").localeCompare(a.criadoEm||""))[0].id;
+  const sp=ehSP();const lista=orcsDaAba();
+  if(!lista.length){draft=null;$("#app").innerHTML=sp?barraSP()+'<div class="empty">Nenhum orçamento de São Paulo ainda. Cadastre os pratos em "Menu SP (fichas)" e clique em "Novo orçamento SP".</div>':'<div class="empty">Nenhum orçamento. Crie um pedido no Funil.</div>';ligarBarraSP();return}
+  if(!selOrc||!lista.some(o=>o.id===selOrc))selOrc=lista.slice().sort((a,b)=>(b.criadoEm||"").localeCompare(a.criadoEm||""))[0].id;
   draft=keep||strip(byId("orcamentos",selOrc));
   const ro=canWrite?"":"disabled";
   const cliOpts=S.clientes.map(c=>`<option value="${c.id}" ${c.id===draft.cliente?"selected":""}>${esc(c.nome)}</option>`).join("");
-  const menu=CATS.map(cat=>{const fs=S.fichas.filter(f=>f.categoria===cat);if(!fs.length)return"";
+  const menu=CATS.map(cat=>{const fs=S.fichas.filter(f=>f.categoria===cat&&!!f.sp===sp);if(!fs.length)return"";
     return `<span class="cat">${cat}</span>`+fs.map(f=>`<label class="ck"><input type="checkbox" data-menu="${f.id}" ${(draft.cardapio||[]).includes(f.id)?"checked":""}> ${esc(f.nome)}</label>`).join("")}).join("");
   const avaliacao=["realizado","avaliado"].includes(draft.etapa)?`<div class="sec"><h3>Avaliação pós-evento</h3><div class="grid">
       <label class="f">Nota (1 a 5)<select data-f="nota"><option value="">—</option>${[5,4,3,2,1].map(n=>`<option ${+draft.nota===n?"selected":""}>${n}</option>`).join("")}</select></label>
       <label class="f" style="grid-column:span 2">Comentário do cliente<textarea data-f="comentario">${esc(draft.comentario)}</textarea></label></div>
       <label class="ck"><input type="checkbox" data-f="depoimento" ${draft.depoimento?"checked":""}> Cliente autorizou publicar o comentário como depoimento</label></div>`:"";
-  $("#app").innerHTML=`<div class="split"><aside class="list" id="olist" aria-label="Orçamentos"></aside>
-  <div class="panel" id="oform">
-    <div class="sec"><div class="bar" style="margin:0"><div><span class="eyebrow">${esc(draft.servico||"")}</span><h2>${esc((byId("clientes",draft.cliente)||{}).nome||"Orçamento")}</h2></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="o_del" ${ro}>Excluir</button><button class="btn" id="o_prop">Ver proposta</button><button class="btn pri" id="o_save" ${ro}>Salvar alterações</button></div></div>
-      <div class="grid">
-        <label class="f">Cliente<select data-f="cliente">${cliOpts}</select></label>
+  const campos=sp?`        <label class="f">Cliente<select data-f="cliente">${cliOpts}</select></label>
+        <label class="f">Ocasião<input data-f="tipoEvento" value="${esc(draft.tipoEvento)}" placeholder="Jantar, aniversário, corporativo…"></label>
+        <label class="f">Data<input type="date" data-f="data" value="${esc(draft.data)}"></label>
+        <label class="f">Horário<input data-f="horario" value="${esc(draft.horario)}" placeholder="19h"></label>
+        <label class="f">Local<input data-f="local" value="${esc(draft.local)}" placeholder="Endereço em São Paulo"></label>
+        <label class="f">Pessoas<input type="number" min="0" data-f="convidados" value="${+draft.convidados||0}"></label>
+        <label class="f">Etapa<select data-f="etapa">${STAGES.map(([k,l])=>`<option value="${k}" ${k===draft.etapa?"selected":""}>${l}</option>`).join("")}</select></label>`:`        <label class="f">Cliente<select data-f="cliente">${cliOpts}</select></label>
         <label class="f">Serviço<select data-f="servico">${SERVICOS.map(s=>`<option ${s===draft.servico?"selected":""}>${s}</option>`).join("")}</select></label>
         <label class="f">Tipo de evento<input data-f="tipoEvento" value="${esc(draft.tipoEvento)}"></label>
         <label class="f">Data<input type="date" data-f="data" value="${esc(draft.data)}"></label>
@@ -487,10 +508,16 @@ function vOrc(keep){
         <label class="f">Cidade<input data-f="cidade" value="${esc(draft.cidade)}"></label>
         <label class="f">Local<input data-f="local" value="${esc(draft.local)}" placeholder="Salão, residência, endereço"></label>
         <label class="f">Convidados<input type="number" min="0" data-f="convidados" value="${+draft.convidados||0}"></label>
-        <label class="f">Etapa<select data-f="etapa">${STAGES.map(([k,l])=>`<option value="${k}" ${k===draft.etapa?"selected":""}>${l}</option>`).join("")}</select></label>
-      </div></div>
-    <div class="sec"><h3>Cardápio</h3><div class="menu">${menu||'<span style="color:var(--muted)">Cadastre fichas técnicas para montar o cardápio.</span>'}</div></div>
-    <div class="sec"><h3>Preço</h3>
+        <label class="f">Etapa<select data-f="etapa">${STAGES.map(([k,l])=>`<option value="${k}" ${k===draft.etapa?"selected":""}>${l}</option>`).join("")}</select></label>`;
+  const blocoPreco=sp?`    <div class="sec"><h3>Custos</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">Preço = gastronomia + garçons + custo de produção. A gastronomia é o custo dos insumos dos pratos marcados no menu SP, pela quantidade de pessoas. No custo de produção entra o valor fechado da operação em São Paulo: passagens, furgão, equipe, hospedagem e a sua margem.</p>
+    <div class="grid">
+      <label class="f">Garçons (quantidade)<input type="number" min="0" step="1" data-f="garconsQtd" value="${+draft.garconsQtd||0}"></label>
+      <label class="f">Diária por garçom (R$)<input type="number" min="0" step="10" data-f="garconsValor" value="${+draft.garconsValor||0}"></label>
+      <label class="f">Custo de produção (R$, valor fechado)<input type="number" min="0" step="100" data-f="producao" value="${+draft.producao||0}"></label>
+      <label class="f">Preço final (R$, opcional)<input type="number" min="0" step="10" data-f="precoFinal" value="${+draft.precoFinal||""}" placeholder="usa o calculado"></label>
+    </div>
+    <label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>`:`    <div class="sec"><h3>Preço</h3>
     <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, impostos e a sua margem. Garçons, louças e os serviços extras são terceirizados e têm campos próprios, somados por fora e mostrados em linhas separadas na proposta; "Equipe e logística" é o custo interno (sua equipe, transporte) e entra na linha Gastronomia.</p>
     <div class="grid">
       <label class="f">CMV alvo (% do preço que vai para insumos)<input type="number" min="5" max="90" data-f="cmv" value="${+draft.cmv||30}"></label>
@@ -513,7 +540,16 @@ function vOrc(keep){
     <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">Em branco, a proposta usa os textos padrão (aba Usuários > Dados da proposta). Para mudar só neste evento, escreva aqui ou clique em "Usar o padrão como base" e edite.</p>
     <div class="grid" style="grid-template-columns:1fr">
       ${[["garcons","Observação dos garçons"],["loucas","Observação das louças"],["observacoes","Observações importantes (uma por linha)"]].map(([k,l])=>`<label class="f">${l}<textarea data-t="${k}" placeholder="${esc(textoPadrao(k,draft))}" ${k==="observacoes"?'style="min-height:120px"':""} ${ro}>${esc(((draft.textos||{})[k])||"")}</textarea><span><button type="button" class="btn ghost sm" data-tpad="${k}" ${ro}>Usar o padrão como base</button></span></label>`).join("")}
-    </div></div>
+    </div></div>`;
+  $("#app").innerHTML=`${sp?barraSP():""}<div class="split"><aside class="list" id="olist" aria-label="Orçamentos"></aside>
+  <div class="panel" id="oform">
+    <div class="sec"><div class="bar" style="margin:0"><div><span class="eyebrow">${esc(sp?"Orçamento São Paulo":draft.servico||"")}</span><h2>${esc((byId("clientes",draft.cliente)||{}).nome||"Orçamento")}</h2></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="o_del" ${ro}>Excluir</button><button class="btn" id="o_prop">Ver proposta</button><button class="btn pri" id="o_save" ${ro}>Salvar alterações</button></div></div>
+      <div class="grid">
+        ${campos}
+      </div></div>
+    <div class="sec"><h3>Cardápio</h3><div class="menu">${menu||(sp?'<span style="color:var(--muted)">Cadastre os pratos de São Paulo em "Menu SP (fichas)" para montar o cardápio.</span>':'<span style="color:var(--muted)">Cadastre fichas técnicas para montar o cardápio.</span>')}</div></div>
+    ${blocoPreco}
     ${avaliacao}
     <div class="sec" id="oout"></div>
   </div></div>`;
@@ -521,9 +557,10 @@ function vOrc(keep){
   $("#o_save").onclick=async()=>{if(await save("orcamentos/"+selOrc,draft))toast("Orçamento salvo.")};
   $("#o_prop").onclick=()=>{subtab="proposta";renderOrcOut();const o=$("#oout");if(o)o.scrollIntoView({behavior:"smooth",block:"start"})};
   $("#o_del").onclick=()=>confirmBox("Excluir este orçamento? Essa ação não pode ser desfeita.",async()=>{await del("orcamentos/"+selOrc);selOrc=null;draft=null;render()});
-  $("#x_add").onclick=()=>{draft.extras=[...(draft.extras||[]),{descricao:"",valor:0}];const st=subtab;vOrc(draft);subtab=st;renderOrcOut();const ult=document.querySelector('[data-xk="'+(draft.extras.length-1)+'"][data-xp="descricao"]');if(ult)ult.focus()};
+  const xa=$("#x_add");if(xa)xa.onclick=()=>{draft.extras=[...(draft.extras||[]),{descricao:"",valor:0}];const st=subtab;vOrc(draft);subtab=st;renderOrcOut();const ult=document.querySelector('[data-xk="'+(draft.extras.length-1)+'"][data-xp="descricao"]');if(ult)ult.focus()};
   document.querySelectorAll("[data-tpad]").forEach(b=>b.onclick=()=>{const k=b.dataset.tpad;const ta=document.querySelector('textarea[data-t="'+k+'"]');ta.value=textoPadrao(k,draft);draft.textos={...(draft.textos||{}),[k]:ta.value};ta.focus();renderOrcOut()});
   document.querySelectorAll("[data-xrm]").forEach(b=>b.onclick=()=>{draft.extras=(draft.extras||[]).filter((_,k)=>k!==+b.dataset.xrm);vOrc(draft)});
+  ligarBarraSP();
   renderOrcList();renderOrcOut();
 }
 function onOrcInput(e){
@@ -538,7 +575,7 @@ function onOrcInput(e){
 }
 function renderOrcList(){
   const el=$("#olist");if(!el)return;
-  el.innerHTML=S.orcamentos.slice().sort((a,b)=>(a.data||"9").localeCompare(b.data||"9")).map(o=>{const c=byId("clientes",o.cliente);
+  el.innerHTML=orcsDaAba().slice().sort((a,b)=>(a.data||"9").localeCompare(b.data||"9")).map(o=>{const c=byId("clientes",o.cliente);
     return `<button data-o="${o.id}" aria-current="${o.id===selOrc}">${esc(c?c.nome:"Sem cliente")}<span class="m">${dataBR(o.data)} · ${stageName(o.etapa)}</span></button>`}).join("");
   el.onclick=e=>{const b=e.target.closest("button");if(b){selOrc=b.dataset.o;draft=null;vOrc()}};
 }
@@ -585,7 +622,12 @@ function renderOrcOut(){
       <div class="noprint" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px"><button class="btn pri" id="o_print">Salvar em PDF</button><button class="btn" id="o_docx">Baixar em DOCX</button><button class="btn" id="o_whats" ${telWhats(c)?"":"disabled"}>Enviar pelo WhatsApp</button></div>
       <p class="noprint" style="text-align:center;color:var(--muted);font-size:.8rem;margin:6px 0 0">O PDF sai pela tela de impressão do navegador: em "Destino", escolha "Salvar como PDF". O DOCX abre no Word para ajustes finos antes de enviar. ${telWhats(c)?"O WhatsApp abre a conversa com o cliente e o resumo já escrito; anexe o PDF em seguida.":"Para enviar pelo WhatsApp, cadastre o telefone do cliente."}</p>`}
   el.innerHTML=`<h3>Resultado</h3>
-  <div class="kpis"><div class="kpi"><span>Custo de insumos</span><b class="num">${brl(r.insumos)}</b></div>
+  ${r.sp?`<div class="kpis"><div class="kpi"><span>Gastronomia (custo)</span><b class="num">${brl(r.insumos)}</b></div>
+    <div class="kpi"><span>Garçons</span><b class="num">${brl(r.garcons)}</b></div>
+    <div class="kpi"><span>Custo de produção</span><b class="num">${brl(r.producao)}</b></div>
+    <div class="kpi main"><span>Preço da proposta</span><b class="num">${brl(r.total)}</b></div>
+    <div class="kpi"><span>Por pessoa</span><b class="num">${brl(r.porPessoa)}</b></div></div>
+  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço = gastronomia + garçons + custo de produção (${brl(r.insumos)} + ${brl(r.garcons)} + ${brl(r.producao)} = ${brl(r.sugerido)})${+draft.precoFinal>0?`; preço final informado: ${brl(r.total)}`:""}. Na proposta, a gastronomia e o custo de produção saem juntos na linha Gastronomia (${brl(r.gastronomia)}) e os garçons em linha própria.</p>`:`<div class="kpis"><div class="kpi"><span>Custo de insumos</span><b class="num">${brl(r.insumos)}</b></div>
     <div class="kpi"><span>Gastronomia</span><b class="num">${brl(r.gastronomia)}</b></div>
     <div class="kpi"><span>Garçons, louças e extras</span><b class="num">${brl(r.terceiros)}</b></div>
     <div class="kpi"><span>Preço sugerido</span><b class="num">${brl(r.sugerido)}</b></div>
@@ -593,7 +635,7 @@ function renderOrcOut(){
     <div class="kpi"><span>Por convidado</span><b class="num">${brl(r.porPessoa)}</b></div>
     <div class="kpi" title="Fatia do preço da proposta que os insumos ocupam"><span>CMV real</span><b class="num" style="color:${r.cmvReal>40?"var(--bad)":r.cmvReal>32?"var(--warn)":"var(--ok)"}">${num(r.cmvReal,1)}%</b></div>
     <div class="kpi"><span>Saldo a receber</span><b class="num">${brl(Math.max(0,saldo))}</b></div></div>
-  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística + garçons + louças + serviços extras (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)} + ${brl(r.garcons)} + ${brl(r.loucas)} + ${brl(r.outros)}). Na proposta, a gastronomia (${brl(r.gastronomia)}) aparece separada de garçons, louças e extras. CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>
+  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço sugerido = insumos ÷ CMV alvo + equipe e logística + garçons + louças + serviços extras (${brl(r.insumos)} ÷ ${num(+draft.cmv||30,1)}% + ${brl(r.equipe)} + ${brl(r.garcons)} + ${brl(r.loucas)} + ${brl(r.outros)}). Na proposta, a gastronomia (${brl(r.gastronomia)}) aparece separada de garçons, louças e extras. CMV real = insumos ÷ preço da proposta: verde até 32%, amarelo até 40%, vermelho acima disso (os ingredientes estão comendo o preço).</p>`}
   <div class="tabs" role="tablist">${T.map(([k,l])=>`<button role="tab" data-st="${k}" aria-selected="${subtab===k}">${l}</button>`).join("")}</div>${body}`;
   el.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(b){subtab=b.dataset.st;renderOrcOut()}};
   const pr=$("#o_print");if(pr)pr.onclick=()=>{limparImpressao();print()};
@@ -741,25 +783,27 @@ async function baixarDocx(c,o,r){
 }
 
 /* ---------- Fichas técnicas ---------- */
-function vFichas(){
+function vFichas(sp){
+  sp=sp===true;const FICHAS=S.fichas.filter(f=>!!f.sp===sp);
   const ro=canWrite?"":"disabled";
-  const rows=CATS.map(cat=>{const fs=S.fichas.filter(f=>f.categoria===cat).sort((a,b)=>a.nome.localeCompare(b.nome));if(!fs.length)return"";
+  const rows=CATS.map(cat=>{const fs=FICHAS.filter(f=>f.categoria===cat).sort((a,b)=>a.nome.localeCompare(b.nome));if(!fs.length)return"";
     return `<tr><td colspan="5" class="eyebrow" style="padding-top:18px">${cat}</td></tr>`+fs.map(f=>{const c=custoFicha(f);
       return `<tr><td><a href="#" data-fi="${f.id}" style="color:var(--ink);font-weight:600">${esc(f.nome)}</a>${exChip(f)}</td><td class="r">${num(f.rendimento,0)} porções</td><td class="r">${num(f.porcoesPorPessoa||1)}</td><td class="r">${brl(c)}</td><td class="r">${brl(f.rendimento?c/f.rendimento:0)}</td></tr>`}).join("")}).join("");
-  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Fichas técnicas</span><h2>Receitas, rendimento e custo</h2><p>O orçamento usa o rendimento e a porção por convidado de cada ficha. Custo atualiza sozinho quando o preço de um insumo muda.</p></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="ck" style="font-size:.82rem;color:var(--muted)"><input type="checkbox" id="fp_custos" ${prefCustos?"checked":""}> imprimir com custos</label><button class="btn" id="fprint" ${S.fichas.length?"":"disabled"}>Imprimir fichas</button><button class="btn pri" id="nf" ${ro}>Nova ficha</button></div></div>
-  ${S.fichas.length?`<div class="panel tbl"><table><thead><tr><th>Prato</th><th class="r">Rendimento</th><th class="r">Porções por convidado</th><th class="r">Custo da receita</th><th class="r">Custo por porção</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Nenhuma ficha técnica. Cadastre os insumos e depois a primeira ficha.</div>'}`;
-  $("#nf").onclick=()=>modalFicha(null);
+  $("#app").innerHTML=`${sp?barraSP():""}<div class="bar"><div><span class="eyebrow">${sp?"Menu São Paulo":"Fichas técnicas"}</span><h2>${sp?"Pratos servidos em São Paulo":"Receitas, rendimento e custo"}</h2><p>${sp?"Estas fichas aparecem só no cardápio dos orçamentos SP. Os insumos são os mesmos da aba Insumos.":"O orçamento usa o rendimento e a porção por convidado de cada ficha. Custo atualiza sozinho quando o preço de um insumo muda."}</p></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="ck" style="font-size:.82rem;color:var(--muted)"><input type="checkbox" id="fp_custos" ${prefCustos?"checked":""}> imprimir com custos</label><button class="btn" id="fprint" ${FICHAS.length?"":"disabled"}>Imprimir fichas</button><button class="btn pri" id="nf" ${ro}>${sp?"Nova ficha SP":"Nova ficha"}</button></div></div>
+  ${FICHAS.length?`<div class="panel tbl"><table><thead><tr><th>Prato</th><th class="r">Rendimento</th><th class="r">Porções por convidado</th><th class="r">Custo da receita</th><th class="r">Custo por porção</th></tr></thead><tbody>${rows}</tbody></table></div>`:(sp?'<div class="empty">Nenhum prato de São Paulo ainda. Clique em "Nova ficha SP".</div>':'<div class="empty">Nenhuma ficha técnica. Cadastre os insumos e depois a primeira ficha.</div>')}`;
+  $("#nf").onclick=()=>modalFicha(null,sp);
+  ligarBarraSP();
   $("#fp_custos").onchange=e=>setPrefCustos(e.target.checked);
-  $("#fprint").onclick=()=>{const fs=CATS.flatMap(cat=>S.fichas.filter(f=>f.categoria===cat).sort((a,b)=>a.nome.localeCompare(b.nome)));
-    const outras=S.fichas.filter(f=>!CATS.includes(f.categoria));imprimirDoc([...fs,...outras].map(f=>htmlFicha(f,prefCustos)).join(""),"Fichas técnicas Saimon Novack")};
+  $("#fprint").onclick=()=>{const fs=CATS.flatMap(cat=>FICHAS.filter(f=>f.categoria===cat).sort((a,b)=>a.nome.localeCompare(b.nome)));
+    const outras=FICHAS.filter(f=>!CATS.includes(f.categoria));imprimirDoc([...fs,...outras].map(f=>htmlFicha(f,prefCustos)).join(""),"Fichas técnicas Saimon Novack")};
   document.querySelectorAll("[data-fi]").forEach(a=>a.onclick=e=>{e.preventDefault();modalFicha(a.dataset.fi)});
 }
-function modalFicha(id){
-  const f=id?strip(byId("fichas",id)):{nome:"",categoria:"Principal",rendimento:10,porcoesPorPessoa:1,itens:[],preparo:""};
+function modalFicha(id,sp){
+  const f=id?strip(byId("fichas",id)):{nome:"",categoria:"Principal",rendimento:10,porcoesPorPessoa:1,itens:[],preparo:"",...(sp===true?{sp:true}:{})};
   const insOpts=sel=>S.insumos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(i=>`<option value="${i.id}" ${i.id===sel?"selected":""}>${esc(i.nome)} (${esc(i.unidade)})</option>`).join("");
   const draw=()=>{
     $("#modal").innerHTML=`<div class="ov"><form class="modal" id="ff">
-      <div><span class="eyebrow">Ficha técnica</span><h2>${id?esc(f.nome):"Nova ficha"}</h2></div>
+      <div><span class="eyebrow">${f.sp?"Ficha técnica · Menu São Paulo":"Ficha técnica"}</span><h2>${id?esc(f.nome):"Nova ficha"}</h2></div>
       <div class="grid"><label class="f" style="grid-column:1/-1">Nome do prato<input id="f_nome" value="${esc(f.nome)}" required></label>
         <label class="f">Categoria<select id="f_cat">${CATS.map(c=>`<option ${c===f.categoria?"selected":""}>${c}</option>`).join("")}</select></label>
         <label class="f">Rendimento (porções)<input id="f_rend" type="number" min="1" value="${+f.rendimento||1}"></label>

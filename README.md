@@ -109,6 +109,17 @@ Para testar na máquina: `npx supabase start`, depois `npx supabase functions se
 
 Preço sugerido = insumos ÷ CMV alvo + equipe e logística (custo interno) + garçons terceirizados (quantidade × diária) + louças e utensílios terceirizados (valor fechado). O preço final, se preenchido, substitui o sugerido. "CMV real" é insumos ÷ preço da proposta (verde até 32%, amarelo até 40%, vermelho acima). A proposta ao cliente mostra "Inclui equipe de N garçons e louças e utensílios" quando houver, sem valores. Colunas `garcons_qtd`, `garcons_valor` e `loucas` em `orcamentos` (migração `20261016200000_terceirizados.sql`).
 
+## Orçamentos SP (São Paulo)
+
+Aba própria, pedida pela Talise em 11/2026, para orçar eventos em São Paulo com menu fixo e custo de deslocamento fechado.
+
+- **Lista e formulário próprios.** Orçamento marcado com `orcamentos.sp = true` aparece só nessa aba (no Funil ele leva a etiqueta "SP" e abre na aba certa). Campos: cliente, ocasião, data, horário, local, pessoas e etapa.
+- **Menu SP.** O botão "Menu SP (fichas)" abre as fichas com `fichas.sp = true`, cadastradas ali mesmo. Só elas aparecem no cardápio do orçamento SP, e elas não aparecem na aba Fichas técnicas nem nos orçamentos normais. Os insumos são os mesmos da aba Insumos.
+- **Preço.** Preço = gastronomia + garçons + custo de produção. Gastronomia é o custo dos insumos dos pratos marcados, pela quantidade de pessoas, sem divisão por CMV. Garçons = quantidade × diária. Custo de produção (`orcamentos.producao`) é um valor fechado digitado: passagens, furgão, equipe, hospedagem e a margem. "Preço final", se preenchido, substitui o calculado.
+- **Proposta.** Mesmas saídas dos outros orçamentos (PDF, DOCX, WhatsApp, lista de compras, ordem de produção). Na proposta, gastronomia e custo de produção saem juntos na linha Gastronomia; garçons em linha própria.
+
+Colunas na migração `20261109100000_orcamentos_sp.sql`.
+
 ## Realtime e recarga
 
 A tela assina `postgres_changes` das tabelas operacionais, então o que um usuário grava aparece para os outros. Ao voltar para a aba do navegador, o app recarrega tudo, para cobrir eventos perdidos em segundo plano.
