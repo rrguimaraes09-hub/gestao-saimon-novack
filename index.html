@@ -257,7 +257,7 @@ const VIEWS=[["funil","Funil"],["orc","Orçamentos"],["sp","Orçamentos SP"],["f
 const VIEW_ADMIN=["usuarios","Usuários"];
 const S={insumos:[],fichas:[],clientes:[],orcamentos:[]};
 const A={perfis:[],convites:[]};
-let sb=null,sessao=null,perfil=null,canal=null,canWrite=true,view="funil",selOrc=null,draft=null,subtab="custos",ready=false,spSub="orc";
+let sb=null,sessao=null,perfil=null,canal=null,canWrite=true,view="funil",selOrc=null,draft=null,subtab="custos",ready=false,spSub="orc",spOpc=false;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -494,6 +494,13 @@ function vOrc(keep){
       <label class="f">Nota (1 a 5)<select data-f="nota"><option value="">—</option>${[5,4,3,2,1].map(n=>`<option ${+draft.nota===n?"selected":""}>${n}</option>`).join("")}</select></label>
       <label class="f" style="grid-column:span 2">Comentário do cliente<textarea data-f="comentario">${esc(draft.comentario)}</textarea></label></div>
       <label class="ck"><input type="checkbox" data-f="depoimento" ${draft.depoimento?"checked":""}> Cliente autorizou publicar o comentário como depoimento</label></div>`:"";
+  const extrasHtml=`<div><span class="eyebrow">Serviços extras terceirizados</span>
+      ${(draft.extras||[]).length?`<div class="tbl"><table><thead><tr><th>Descrição</th><th class="r" style="width:150px">Valor (R$)</th><th style="width:40px"></th></tr></thead><tbody>
+        ${(draft.extras||[]).map((x,k)=>`<tr><td><input data-xk="${k}" data-xp="descricao" value="${esc(x.descricao)}" placeholder="Copeira, segurança, DJ…" ${ro}></td><td><input data-xk="${k}" data-xp="valor" type="number" min="0" step="10" value="${+x.valor||0}" ${ro}></td><td><button type="button" class="btn ghost sm" data-xrm="${k}" aria-label="Remover" ${ro}>✕</button></td></tr>`).join("")}
+      </tbody></table></div>`:'<p style="color:var(--muted);font-size:.85rem;margin:4px 0 0">Nenhum. Use para copeira, segurança, DJ e outros serviços cobrados à parte; cada um sai em linha própria na proposta.</p>'}
+      <div style="margin-top:8px"><button type="button" class="btn sm" id="x_add" ${ro}>+ Adicionar serviço extra</button></div></div>`;
+  // Opcionais de SP: abre sozinho quando algum já tem valor, ou quando o usuário abriu
+  const spOpcAberto=d=>spOpc||(+d.loucas||0)>0||(+d.sinal||0)>0||(+d.pago||0)>0||!!d.sinalAte||(d.extras||[]).length>0;
   const campos=sp?`        <label class="f">Cliente<select data-f="cliente">${cliOpts}</select></label>
         <label class="f">Ocasião<input data-f="tipoEvento" value="${esc(draft.tipoEvento)}" placeholder="Jantar, aniversário, corporativo…"></label>
         <label class="f">Data<input type="date" data-f="data" value="${esc(draft.data)}"></label>
@@ -517,6 +524,17 @@ function vOrc(keep){
       <label class="f">Custo de produção (R$, valor fechado)<input type="number" min="0" step="100" data-f="producao" value="${+draft.producao||0}"></label>
       <label class="f">Preço final (R$, opcional)<input type="number" min="0" step="10" data-f="precoFinal" value="${+draft.precoFinal||""}" placeholder="usa o calculado"></label>
     </div>
+    <details id="sp_opc" ${spOpcAberto(draft)?"open":""}>
+      <summary style="cursor:pointer;color:var(--muted);font-size:.85rem;padding:4px 0">Opcionais: louças, serviços extras, sinal e valor recebido</summary>
+      <p style="color:var(--muted);font-size:.8rem;margin:6px 0 10px;max-width:72ch">Use só se o evento pedir. Louças e serviços extras somam no preço e saem em linhas próprias na proposta; o sinal aparece no bloco de pagamento.</p>
+      <div class="grid">
+        <label class="f">Louças e utensílios (R$)<input type="number" min="0" step="10" data-f="loucas" value="${+draft.loucas||0}"></label>
+        <label class="f">Sinal solicitado (R$)<input type="number" min="0" step="100" data-f="sinal" value="${+draft.sinal||""}" placeholder="para garantir a data"></label>
+        <label class="f">Sinal até<input type="date" data-f="sinalAte" value="${esc(draft.sinalAte)}"></label>
+        <label class="f">Valor já recebido (R$)<input type="number" min="0" step="10" data-f="pago" value="${+draft.pago||""}"></label>
+      </div>
+      <div style="margin-top:12px">${extrasHtml}</div>
+    </details>
     <label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>`:`    <div class="sec"><h3>Preço</h3>
     <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">CMV não é lucro: é a fatia do preço que os ingredientes ocupam. Com alvo de 30%, insumos de R$ 1.000 dão preço sugerido de R$ 3.333; os outros 70% cobrem equipe, impostos e a sua margem. Garçons, louças e os serviços extras são terceirizados e têm campos próprios, somados por fora e mostrados em linhas separadas na proposta; "Equipe e logística" é o custo interno (sua equipe, transporte) e entra na linha Gastronomia.</p>
     <div class="grid">
@@ -530,11 +548,7 @@ function vOrc(keep){
       <label class="f">Preço final (R$, opcional)<input type="number" min="0" step="10" data-f="precoFinal" value="${+draft.precoFinal||""}" placeholder="usa o sugerido"></label>
       <label class="f">Valor já recebido (R$)<input type="number" min="0" step="10" data-f="pago" value="${+draft.pago||""}"></label>
     </div>
-    <div><span class="eyebrow">Serviços extras terceirizados</span>
-      ${(draft.extras||[]).length?`<div class="tbl"><table><thead><tr><th>Descrição</th><th class="r" style="width:150px">Valor (R$)</th><th style="width:40px"></th></tr></thead><tbody>
-        ${(draft.extras||[]).map((x,k)=>`<tr><td><input data-xk="${k}" data-xp="descricao" value="${esc(x.descricao)}" placeholder="Copeira, segurança, DJ…" ${ro}></td><td><input data-xk="${k}" data-xp="valor" type="number" min="0" step="10" value="${+x.valor||0}" ${ro}></td><td><button type="button" class="btn ghost sm" data-xrm="${k}" aria-label="Remover" ${ro}>✕</button></td></tr>`).join("")}
-      </tbody></table></div>`:'<p style="color:var(--muted);font-size:.85rem;margin:4px 0 0">Nenhum. Use para copeira, segurança, DJ e outros serviços cobrados à parte; cada um sai em linha própria na proposta.</p>'}
-      <div style="margin-top:8px"><button type="button" class="btn sm" id="x_add" ${ro}>+ Adicionar serviço extra</button></div></div>
+    ${extrasHtml}
     <label class="f">Condições da proposta<textarea data-f="condicoes" placeholder="Forma de pagamento, validade, o que está incluso…">${esc(draft.condicoes)}</textarea></label></div>
     <div class="sec"><h3>Textos desta proposta</h3>
     <p style="color:var(--muted);font-size:.85rem;margin:0;max-width:72ch">Em branco, a proposta usa os textos padrão (aba Usuários > Dados da proposta). Para mudar só neste evento, escreva aqui ou clique em "Usar o padrão como base" e edite.</p>
@@ -561,6 +575,7 @@ function vOrc(keep){
   document.querySelectorAll("[data-tpad]").forEach(b=>b.onclick=()=>{const k=b.dataset.tpad;const ta=document.querySelector('textarea[data-t="'+k+'"]');ta.value=textoPadrao(k,draft);draft.textos={...(draft.textos||{}),[k]:ta.value};ta.focus();renderOrcOut()});
   document.querySelectorAll("[data-xrm]").forEach(b=>b.onclick=()=>{draft.extras=(draft.extras||[]).filter((_,k)=>k!==+b.dataset.xrm);vOrc(draft)});
   ligarBarraSP();
+  const opc=$("#sp_opc");if(opc)opc.ontoggle=()=>{spOpc=opc.open};
   renderOrcList();renderOrcOut();
 }
 function onOrcInput(e){
@@ -623,11 +638,12 @@ function renderOrcOut(){
       <p class="noprint" style="text-align:center;color:var(--muted);font-size:.8rem;margin:6px 0 0">O PDF sai pela tela de impressão do navegador: em "Destino", escolha "Salvar como PDF". O DOCX abre no Word para ajustes finos antes de enviar. ${telWhats(c)?"O WhatsApp abre a conversa com o cliente e o resumo já escrito; anexe o PDF em seguida.":"Para enviar pelo WhatsApp, cadastre o telefone do cliente."}</p>`}
   el.innerHTML=`<h3>Resultado</h3>
   ${r.sp?`<div class="kpis"><div class="kpi"><span>Gastronomia (custo)</span><b class="num">${brl(r.insumos)}</b></div>
-    <div class="kpi"><span>Garçons</span><b class="num">${brl(r.garcons)}</b></div>
+    <div class="kpi"><span>${r.loucas>0||r.outros>0?"Garçons, louças e extras":"Garçons"}</span><b class="num">${brl(r.terceiros)}</b></div>
     <div class="kpi"><span>Custo de produção</span><b class="num">${brl(r.producao)}</b></div>
     <div class="kpi main"><span>Preço da proposta</span><b class="num">${brl(r.total)}</b></div>
-    <div class="kpi"><span>Por pessoa</span><b class="num">${brl(r.porPessoa)}</b></div></div>
-  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço = gastronomia + garçons + custo de produção (${brl(r.insumos)} + ${brl(r.garcons)} + ${brl(r.producao)} = ${brl(r.sugerido)})${+draft.precoFinal>0?`; preço final informado: ${brl(r.total)}`:""}. Na proposta, a gastronomia e o custo de produção saem juntos na linha Gastronomia (${brl(r.gastronomia)}) e os garçons em linha própria.</p>`:`<div class="kpis"><div class="kpi"><span>Custo de insumos</span><b class="num">${brl(r.insumos)}</b></div>
+    <div class="kpi"><span>Por pessoa</span><b class="num">${brl(r.porPessoa)}</b></div>${(+draft.pago||0)>0?`
+    <div class="kpi"><span>Saldo a receber</span><b class="num">${brl(Math.max(0,saldo))}</b></div>`:""}</div>
+  <p style="color:var(--muted);font-size:.8rem;margin:0">Preço = gastronomia + garçons${r.loucas>0||r.outros>0?" + louças + extras":""} + custo de produção (${brl(r.insumos)} + ${brl(r.garcons)}${r.loucas>0||r.outros>0?` + ${brl(r.loucas)} + ${brl(r.outros)}`:""} + ${brl(r.producao)} = ${brl(r.sugerido)})${+draft.precoFinal>0?`; preço final informado: ${brl(r.total)}`:""}. Na proposta, a gastronomia e o custo de produção saem juntos na linha Gastronomia (${brl(r.gastronomia)}); garçons, louças e extras saem em linhas próprias.</p>`:`<div class="kpis"><div class="kpi"><span>Custo de insumos</span><b class="num">${brl(r.insumos)}</b></div>
     <div class="kpi"><span>Gastronomia</span><b class="num">${brl(r.gastronomia)}</b></div>
     <div class="kpi"><span>Garçons, louças e extras</span><b class="num">${brl(r.terceiros)}</b></div>
     <div class="kpi"><span>Preço sugerido</span><b class="num">${brl(r.sugerido)}</b></div>
