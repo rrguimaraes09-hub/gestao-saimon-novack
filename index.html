@@ -85,6 +85,11 @@ main{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
 .card .t{font-weight:600}
 .card .m{color:var(--muted);font-size:.8rem}
 .card .v{font-family:var(--display);font-size:1.05rem}
+.card .pg{font-size:.76rem;color:var(--muted)}
+.card .pg.ok{color:var(--gold)}
+.card .arq{align-self:flex-start;margin-top:2px;padding:2px 0;border:0;background:none;color:var(--muted);font-size:.76rem;text-decoration:underline;cursor:pointer}
+.card .arq:hover{color:var(--ink)}
+.card .arq:disabled{opacity:.45;cursor:not-allowed}
 .card select{font-size:.78rem;padding:3px 4px;border:1px solid var(--line);border-radius:6px;background:var(--bg);margin-top:4px}
 
 /* Formulários */
@@ -257,7 +262,7 @@ const VIEWS=[["funil","Funil"],["orc","Orçamentos"],["sp","Orçamentos SP"],["f
 const VIEW_ADMIN=["usuarios","Usuários"];
 const S={insumos:[],fichas:[],clientes:[],orcamentos:[]};
 const A={perfis:[],convites:[]};
-let sb=null,sessao=null,perfil=null,canal=null,canWrite=true,view="funil",selOrc=null,draft=null,subtab="custos",ready=false,spSub="orc",spOpc=false;
+let sb=null,sessao=null,perfil=null,canal=null,canWrite=true,view="funil",selOrc=null,draft=null,subtab="custos",ready=false,spSub="orc",spOpc=false,funilArq=false;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -307,7 +312,7 @@ const MAP={
   insumos:{nome:"nome",unidade:"unidade",custo:"custo",exemplo:"exemplo"},
   fichas:{nome:"nome",categoria:"categoria",rendimento:"rendimento",porcoesPorPessoa:"porcoes_por_pessoa",itens:"itens",preparo:"preparo",sp:"sp",exemplo:"exemplo"},
   clientes:{nome:"nome",telefone:"telefone",email:"email",aniversario:"aniversario",origem:"origem",pratoMarcante:"prato_marcante",restricoes:"restricoes",notas:"notas",consentimento:"consentimento",exemplo:"exemplo"},
-  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",textos:"textos",sp:"sp",producao:"producao",condicoes:"condicoes",etapa:"etapa",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
+  orcamentos:{cliente:"cliente",servico:"servico",tipoEvento:"tipo_evento",data:"data",cidade:"cidade",convidados:"convidados",origem:"origem",cardapio:"cardapio",cmv:"cmv",equipe:"equipe",precoFinal:"preco_final",pago:"pago",garconsQtd:"garcons_qtd",garconsValor:"garcons_valor",loucas:"loucas",horario:"horario",local:"local",sinal:"sinal",sinalAte:"sinal_ate",extras:"extras",textos:"textos",sp:"sp",producao:"producao",condicoes:"condicoes",etapa:"etapa",arquivado:"arquivado",nota:"nota",comentario:"comentario",depoimento:"depoimento",exemplo:"exemplo"}
 };
 const NULAVEIS=new Set(["aniversario","data","cliente","nota","sinalAte"]);   // texto vazio vira null no banco
 const NUMERICOS=new Set(["custo","rendimento","porcoesPorPessoa","convidados","cmv","equipe","precoFinal","pago","nota","garconsQtd","garconsValor","loucas","sinal","producao"]);
@@ -413,24 +418,40 @@ function render(){
 /* ---------- Funil ---------- */
 function vFunil(){
   const ro=canWrite?"":"disabled";
+  const nArq=S.orcamentos.filter(o=>o.arquivado).length;
   const cols=STAGES.map(([k,l])=>{
-    const items=S.orcamentos.filter(o=>(o.etapa||"pedido")===k).sort((a,b)=>(a.data||"9").localeCompare(b.data||"9"));
+    const items=S.orcamentos.filter(o=>(o.etapa||"pedido")===k&&!!o.arquivado===funilArq).sort((a,b)=>(a.data||"9").localeCompare(b.data||"9"));
     const cards=items.map(o=>{const c=byId("clientes",o.cliente);const r=calc(o);
       return `<div class="card" data-o="${o.id}" tabindex="0">
         <span class="t">${esc(c?c.nome:"Cliente sem cadastro")}${exChip(o)}${o.sp?' <span class="chip gold">SP</span>':""}</span>
         <span class="m">${esc(o.tipoEvento||o.servico||"")} · ${dataBR(o.data)} · ${num(o.convidados,0)} pessoas</span>
         ${r.linhas.length?`<span class="v num">${brl(r.total)}</span>`:`<span class="m">cardápio a montar</span>`}
+        ${saldoHtml(o,r)}
         <select data-mv="${o.id}" aria-label="Mover etapa" ${ro}>${STAGES.map(([sk,sl])=>`<option value="${sk}" ${sk===k?"selected":""}>${sl}</option>`).join("")}</select>
+        ${funilArq?`<button class="arq" data-arq="${o.id}" ${ro}>Desarquivar</button>`:FINAIS.includes(k)?`<button class="arq" data-arq="${o.id}" ${ro}>Arquivar</button>`:""}
       </div>`}).join("");
     const soma=items.reduce((a,o)=>a+calc(o).total,0);
     return `<section class="col"><h3><span>${l}</span><span class="num">${items.length}</span></h3>${cards||'<span class="m" style="color:var(--muted);font-size:.8rem;padding:4px">Nada aqui.</span>'}${items.length&&soma?`<span class="m num" style="color:var(--muted);font-size:.76rem;padding:2px 4px">Soma ${brl(soma)}</span>`:""}</section>`}).join("");
-  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Funil comercial</span><h2>Do pedido à avaliação</h2><p>Cada cartão é um evento. Clique para abrir o orçamento; use o seletor para mudar de etapa.</p></div><button class="btn pri" id="novo" ${ro}>Novo pedido</button></div>
+  $("#app").innerHTML=`<div class="bar"><div><span class="eyebrow">Funil comercial</span><h2>Do pedido à avaliação</h2><p>${funilArq?"Eventos arquivados. Nada foi apagado: o orçamento e o histórico continuam aqui, e o cartão volta ao funil em \"Desarquivar\".":"Cada cartão é um evento. Clique para abrir o orçamento; use o seletor para mudar de etapa. Evento encerrado (avaliado ou recusado) pode ser arquivado."}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="verarq">${funilArq?"Voltar ao funil":`Ver arquivados (${nArq})`}</button><button class="btn pri" id="novo" ${ro}>Novo pedido</button></div></div>
   ${S.orcamentos.length?"":'<div class="empty">Nenhum pedido ainda. Comece por "Novo pedido".</div>'}
+  ${funilArq&&!nArq?'<div class="empty">Nenhum evento arquivado.</div>':""}
   <div class="board">${cols}</div>`;
   $("#novo").onclick=modalPedido;
-  document.querySelectorAll(".card[data-o]").forEach(el=>{el.addEventListener("click",e=>{if(e.target.tagName==="SELECT")return;openOrc(el.dataset.o)});el.addEventListener("keydown",e=>{if(e.key==="Enter")openOrc(el.dataset.o)})});
+  $("#verarq").onclick=()=>{funilArq=!funilArq;render()};
+  document.querySelectorAll("button[data-arq]").forEach(b=>b.addEventListener("click",async()=>{const o=byId("orcamentos",b.dataset.arq);if(!o)return;
+    const arquivar=!o.arquivado;
+    if(arquivar){const sd=saldo(o,calc(o));if(sd.falta>0&&!confirm(`Este evento ainda tem ${brl(sd.falta)} a receber. Arquivar mesmo assim?`))return}
+    if(await save("orcamentos/"+o.id,{...strip(o),arquivado:arquivar}))toast(arquivar?"Evento arquivado. Está em \"Ver arquivados\".":"Evento de volta ao funil.")}));
+  document.querySelectorAll(".card[data-o]").forEach(el=>{el.addEventListener("click",e=>{if(e.target.tagName==="SELECT"||e.target.closest("button"))return;openOrc(el.dataset.o)});el.addEventListener("keydown",e=>{if(e.key==="Enter")openOrc(el.dataset.o)})});
   document.querySelectorAll("select[data-mv]").forEach(s=>s.addEventListener("change",async()=>{const o=byId("orcamentos",s.dataset.mv);if(o)await save("orcamentos/"+o.id,{...strip(o),etapa:s.value})}));
 }
+// Etapas finais (podem ser arquivadas) e etapas em que o evento está fechado (há valor a receber)
+const FINAIS=["avaliado","recusado"];
+const FECHADAS=["aceito","sinal","realizado","avaliado"];
+function saldo(o,r){const fechado=FECHADAS.includes(o.etapa||"pedido")&&r.linhas.length>0&&r.total>0;const pago=+o.pago||0;
+  return {fechado,pago,falta:fechado?Math.max(0,Math.round((r.total-pago)*100)/100):0}}
+function saldoHtml(o,r){const sd=saldo(o,r);if(!sd.fechado)return "";
+  return sd.falta>0?`<span class="pg num">Recebido ${brl(sd.pago)} · falta ${brl(sd.falta)}</span>`:`<span class="pg ok">Quitado</span>`}
 function openOrc(id){const oo=byId("orcamentos",id);view=oo&&oo.sp?"sp":"orc";spSub="orc";selOrc=id;draft=null;subtab="custos";render();scrollTo(0,0)}
 
 function modalPedido(sp){
@@ -591,7 +612,7 @@ function onOrcInput(e){
 function renderOrcList(){
   const el=$("#olist");if(!el)return;
   el.innerHTML=orcsDaAba().slice().sort((a,b)=>(a.data||"9").localeCompare(b.data||"9")).map(o=>{const c=byId("clientes",o.cliente);
-    return `<button data-o="${o.id}" aria-current="${o.id===selOrc}">${esc(c?c.nome:"Sem cliente")}<span class="m">${dataBR(o.data)} · ${stageName(o.etapa)}</span></button>`}).join("");
+    return `<button data-o="${o.id}" aria-current="${o.id===selOrc}">${esc(c?c.nome:"Sem cliente")}<span class="m">${dataBR(o.data)} · ${stageName(o.etapa)}${o.arquivado?" · arquivado":""}</span></button>`}).join("");
   el.onclick=e=>{const b=e.target.closest("button");if(b){selOrc=b.dataset.o;draft=null;vOrc()}};
 }
 function renderOrcOut(){
